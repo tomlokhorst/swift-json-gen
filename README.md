@@ -1,5 +1,5 @@
-Swift JsonGen
-=============
+<img src="https://cloud.githubusercontent.com/assets/75655/5062099/8cc5f3f8-6db3-11e4-8620-c3da216c1262.png" width="218" alt="Swift JsonGen">
+<hr>
 
 Generate Json decoders based on Swift structs.
 
