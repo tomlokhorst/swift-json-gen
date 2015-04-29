@@ -86,16 +86,18 @@ function decodeFunction(type: Type, decoders: string[]) : string {
     .map(a => decodeFunctionArgument(a, decoders))
     .join('');
 
-  if (isKnownType(type.baseName))
-    return '{ $0 as ' + type.baseName + ' }';
+  var typeName = type.alias || type.baseName;
 
-  if (isCastType(type.baseName))
-    return '{ $0 as? ' + type.baseName + ' }';
+  if (isKnownType(typeName))
+    return '{ $0 as ' + typeName + ' }';
 
-  if (decoders.indexOf(type.baseName) > -1)
-    return 'decode' + type.baseName + args
+  if (isCastType(typeName))
+    return '{ $0 as? ' + typeName + ' }';
 
-  return type.baseName + '.decode' + args;
+  if (decoders.indexOf(typeName) > -1)
+    return 'decode' + typeName + args
+
+  return typeName + '.decode' + args;
 }
 
 function decodeFunctionArgument(type: Type, decoders: string[]) : string {
