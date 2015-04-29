@@ -49,6 +49,12 @@ extension Double {
   }
 }
 
+extension NSDictionary {
+  class func decode(json: AnyObject) -> NSDictionary? {
+    return json as? NSDictionary
+  }
+}
+
 extension NSURL {
   class func decode(json: AnyObject) -> NSURL? {
     if let str = json as? String {
