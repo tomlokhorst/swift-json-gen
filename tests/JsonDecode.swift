@@ -52,6 +52,26 @@ extension NSURL {
   }
 }
 
+extension NSDate
+{
+  struct JsonDecodeDateFormatter {
+    static let withTimeZone : NSDateFormatter = {
+      let formatter = NSDateFormatter()
+      formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+
+      return formatter
+      }()
+  }
+
+  class func decode(json : AnyObject) -> NSDate? {
+    if let dateString = json as? String {
+      return JsonDecodeDateFormatter.withTimeZone.dateFromString(dateString)
+    }
+
+    return nil
+  }
+}
+
 extension Optional {
   static func decode(decodeT: AnyObject -> T?)(json: AnyObject) -> T? {
     return decodeT(json)
@@ -92,4 +112,3 @@ extension Dictionary {
     return nil
   }
 }
-
