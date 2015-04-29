@@ -68,8 +68,26 @@ function isCastType(type: string) : boolean {
 }
 
 function decodeFunction(type: Type) : string {
-  var args = type.genericArguments.map(t => '({ ' + decodeFunction(t) + '($0) })')
+  var args = type.genericArguments.map(decodeFunctionArgument)
+
+  if (isKnownType(type.baseName))
+    return '{ $0 as ' + type.baseName + ' }';
+
+  if (isCastType(type.baseName))
+    return '{ $0 as? ' + type.baseName + ' }';
+
   return type.baseName + '.decode' + args;
+}
+
+function decodeFunctionArgument(type: Type) : string {
+
+  if (isKnownType(type.baseName))
+    return '{ $0 as ' + type.baseName + ' }';
+
+  if (isCastType(type.baseName))
+    return '{ $0 as? ' + type.baseName + ' }';
+
+  return '({ ' + decodeFunction(type) + '($0) })'
 }
 
 function typeToString(type: Type) : string {
@@ -105,9 +123,20 @@ function makeField(field: VarDecl, aliases: TypeAliases) {
   }
   else {
     lines.push('if ' + fieldName + ' == nil { assertionFailure("field \'' + name + '\' is missing"); return nil }');
-    lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type) + '(' + fieldName + '!)')
-    lines.push('if ' + valueName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
-    lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
+
+    if (isKnownType(type.baseName)) {
+      lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + '!');
+    }
+    else if (isCastType(type.baseName)) {
+      lines.push('let ' + valueName + ': ' + typeString + '? = ' + fieldName + '! as? ' + typeString)
+      lines.push('if ' + valueName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
+      lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
+    }
+    else {
+      lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type) + '(' + fieldName + '!)')
+      lines.push('if ' + valueName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
+      lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
+    }
   }
 
   lines.push('');

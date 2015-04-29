@@ -90,7 +90,7 @@ function generate() {
       }
       else {
         var fileAsts = ast.parse(stderr, true);
-        var typeAliases = fileAsts.flatMap(printer.typeAliases);
+        var typeAliases = fileAsts.flatMap(ast.typeAliases);
 
         if (fileAsts.length == files.length) {
           for (var i = 0; i < files.length; i++) {

@@ -4,5 +4,6 @@ struct Test05 {
   let three: JsonArray
   let four: JsonObject?
   let five: [JsonArray]
+  let six: [[AnyJson?]?]?
 }
 
