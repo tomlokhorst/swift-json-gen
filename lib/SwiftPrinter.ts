@@ -47,10 +47,13 @@ function makeFile(file, typeAliases, filename) {
 
 exports.makeFile = makeFile;
 
-function makeExtension(type, decls, typeAliases) {
+function makeExtension(fullType, decls, typeAliases) {
+  // strip generic type
+  var baseTypeName = fullType.replace(/<([^>]*)>/g, '' );
+
   var pre = [
-    'extension ' + type + ' {',
-    '  static func decode(json : AnyObject) -> ' + type + '? {',
+    'extension ' + baseTypeName + ' {',
+    '  static func decode(json : AnyObject) -> ' + baseTypeName + '? {',
     '    let _dict = json as? [String : AnyObject]',
     '    if _dict == nil { return nil }',
     '    let dict = _dict!',
@@ -69,7 +72,7 @@ function makeExtension(type, decls, typeAliases) {
     lines = lines.concat(subs);
   });
 
-  lines = lines.concat(indent(4)(makeReturn(type, fields)));
+  lines = lines.concat(indent(4)(makeReturn(baseTypeName, fields)));
   lines = lines.concat(post);
 
   return lines.join('\n');

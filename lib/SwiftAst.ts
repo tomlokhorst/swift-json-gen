@@ -45,7 +45,7 @@ Array.prototype.keys = function () {
       var val = s.replace(/'/g, '"');
 
       if (val.length && val[0] == '"')
-        val = JSON.parse(val);
+        val = val.replace(/"/g, '');
 
       return val;
     })
@@ -160,6 +160,7 @@ function parse(text, multiple) {
 
   text = text.trim();
   text = text.replace(/='([^']*)'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
+  text = text.replace(/"<([^>]*)>/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
 
   if (text.charAt(0) != '(') return text;
 
