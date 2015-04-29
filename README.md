@@ -93,3 +93,14 @@ extension Blog {
 }
 ```
 
+Compiling
+---------
+
+This package is written in TypeScript. To make changes to the code of `swift-json-gen`, first install TypeScript:
+
+    > npm install -g typescript
+
+Edit the `.ts` files and compile the code as follows:
+
+    > tsc lib/*.ts
+
