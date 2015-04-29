@@ -35,6 +35,13 @@ extension Int64 {
   }
 }
 
+extension Float {
+  static func decode(json : AnyObject) -> Float? {
+    let number = json as? NSNumber
+    return number.map { $0.floatValue }
+  }
+}
+
 extension Double {
   static func decode(json : AnyObject) -> Double? {
     let number = json as? NSNumber
@@ -95,10 +102,10 @@ extension Array {
 }
 
 extension Dictionary {
-  static func decode(decodeValue: AnyObject -> Value?)(_ json: AnyObject) -> [String: Value]? {
-    var result = [String: Value]()
+  static func decode(decodeKey: AnyObject -> Key?)(_ decodeValue: AnyObject -> Value?)(_ json: AnyObject) -> [Key: Value]? {
+    var result = [Key: Value]()
 
-    if let dict = json as? [String: AnyObject] {
+    if let dict = json as? [Key: AnyObject] {
       for (key, val) in dict {
         if let value = decodeValue(val) {
           result[key] = value

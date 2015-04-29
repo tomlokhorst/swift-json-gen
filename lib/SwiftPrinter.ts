@@ -18,7 +18,7 @@ function makeFile(file: any[], aliases: TypeAliases, filename: string) {
 
   var structs = ast.structs(file, aliases);
   structs.forEach(function (s) {
-    lines = lines.concat(makeExtension(s, aliases));
+    lines = lines.concat(makeExtension(s));
     lines.push('');
   });
 
@@ -27,10 +27,10 @@ function makeFile(file: any[], aliases: TypeAliases, filename: string) {
 
 exports.makeFile = makeFile;
 
-function makeExtension(struct: Struct, aliases: TypeAliases) {
+function makeExtension(struct: Struct) {
   var pre = [
     'extension ' + struct.baseName + ' {',
-    '  static func decode(json : AnyObject) -> ' + struct.baseName + '? {',
+    '  static func decode' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {',
     '    let _dict = json as? [String : AnyObject]',
     '    if _dict == nil { return nil }',
     '    let dict = _dict!',
@@ -44,7 +44,7 @@ function makeExtension(struct: Struct, aliases: TypeAliases) {
   var lines = pre;
 
   struct.varDecls.forEach(function (d) {
-    var subs = makeField(d, aliases).map(indent(4));
+    var subs = makeField(d, struct.typeArguments).map(indent(4));
     lines = lines.concat(subs);
   });
 
@@ -53,6 +53,20 @@ function makeExtension(struct: Struct, aliases: TypeAliases) {
 
   return lines.join('\n');
 }
+
+function decodeArguments(struct: Struct) : string {
+  var parts = struct.typeArguments
+    .map(t => 'decode' + t + ': AnyObject -> ' + t + '?')
+
+  parts.push('json: AnyObject');
+
+  for (var i = 1; i < parts.length; i++) {
+    parts[i] = '_ ' + parts[i];
+  }
+
+  return parts.map(p => '(' + p + ')').join('');
+}
+
 function indent(nr) {
   return function (s) {
     return s == '' ? s :  Array(nr + 1).join(' ') + s;
@@ -67,19 +81,24 @@ function isCastType(type: string) : boolean {
   return type == 'JsonObject' || type == 'JsonArray';
 }
 
-function decodeFunction(type: Type) : string {
-  var args = type.genericArguments.map(decodeFunctionArgument)
+function decodeFunction(type: Type, decoders: string[]) : string {
+  var args = type.genericArguments
+    .map(a => decodeFunctionArgument(a, decoders))
+    .join('');
 
   if (isKnownType(type.baseName))
     return '{ $0 as ' + type.baseName + ' }';
 
   if (isCastType(type.baseName))
     return '{ $0 as? ' + type.baseName + ' }';
+
+  if (decoders.indexOf(type.baseName) > -1)
+    return 'decode' + type.baseName + args
 
   return type.baseName + '.decode' + args;
 }
 
-function decodeFunctionArgument(type: Type) : string {
+function decodeFunctionArgument(type: Type, decoders: string[]) : string {
 
   if (isKnownType(type.baseName))
     return '{ $0 as ' + type.baseName + ' }';
@@ -87,7 +106,7 @@ function decodeFunctionArgument(type: Type) : string {
   if (isCastType(type.baseName))
     return '{ $0 as? ' + type.baseName + ' }';
 
-  return '({ ' + decodeFunction(type) + '($0) })'
+  return '({ ' + decodeFunction(type, decoders) + '($0) })'
 }
 
 function typeToString(type: Type) : string {
@@ -107,7 +126,7 @@ function typeToString(type: Type) : string {
   return type.baseName + '<' + args + '>';
 }
 
-function makeField(field: VarDecl, aliases: TypeAliases) {
+function makeField(field: VarDecl, structTypeArguments: string[]) {
   var name = field.name;
   var type = field.type;
   var fieldName = name + '_field';
@@ -119,7 +138,7 @@ function makeField(field: VarDecl, aliases: TypeAliases) {
   ];
 
   if (type.baseName == 'Optional') {
-    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil ? nil : ' + decodeFunction(type) + '(' + fieldName + '!)')
+    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil ? nil : ' + decodeFunction(type, structTypeArguments) + '(' + fieldName + '!)')
   }
   else {
     lines.push('if ' + fieldName + ' == nil { assertionFailure("field \'' + name + '\' is missing"); return nil }');
@@ -133,7 +152,7 @@ function makeField(field: VarDecl, aliases: TypeAliases) {
       lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
     }
     else {
-      lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type) + '(' + fieldName + '!)')
+      lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type, structTypeArguments    ) + '(' + fieldName + '!)')
       lines.push('if ' + valueName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
       lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
     }

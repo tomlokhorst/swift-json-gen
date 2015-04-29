@@ -8,6 +8,7 @@ interface TypeAliases {
 
 interface Struct {
   baseName: string;
+  typeArguments: string[];
   varDecls: VarDecl[];
 }
 
@@ -48,15 +49,24 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
 
   prefix = prefix ? prefix + '.' : '';
 
-  // strip generic type
   var fullName = ast.key(0);
-  var baseName = prefix + fullName.replace(/<([^>]*)>/g, '' );
+  var baseName = prefix + fullName.replace(/<([^>]*)>/g, '');
+  var typeArgs = genericArguments(fullName)
   var varDecls = ast.children('var_decl').map(a => varDecl(a, aliases));
 
-  var r = { baseName: baseName, varDecls: varDecls };
+  var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
   var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));
 
   return [r].concat(rs);
+}
+
+function genericArguments(fullStructName: String) : string[] {
+
+  var matches = fullStructName.match(/<([^>]*)>/);
+  if (matches && matches.length == 2)
+    return matches[1].split(',').map(s => s.trim());
+
+  return []
 }
 
 function varDecl(ast: any, aliases: TypeAliases) : VarDecl {
@@ -71,10 +81,11 @@ function type(typeString: string, aliases: TypeAliases) : Type {
     return resolved;
   }
 
-  var isWrapped = typeString.startsWith('[') && typeString.endsWith(']');
+  var isBracketed = typeString.startsWith('[') && typeString.endsWith(']');
 
-  var isDictionary = isWrapped && typeString.contains(':');
-  var isArray = isWrapped && !typeString.contains(':');
+  var isGeneric = typeString.match(/\<(.*)>/);
+  var isDictionary = isBracketed && typeString.contains(':');
+  var isArray = isBracketed && !typeString.contains(':');
   var isOptional = typeString.endsWith('?');
 
   if (isOptional) {
@@ -88,18 +99,47 @@ function type(typeString: string, aliases: TypeAliases) : Type {
   }
 
   if (isDictionary) {
-    var inner = typeString.substring(1, typeString.length - 1).trim();
-    var matches = inner.match(/\[(.*):(.*)\]/);
+    var matches = typeString.match(/\[(.*):(.*)\]/);
 
     if (matches.length != 3)
-      throw '"' + typeString + '" appears to be a Dictionary, but isn\'t';
+      throw new Error('"' + typeString + '" appears to be a Dictionary, but isn\'t');
 
     var keyType = type(matches[1].trim(), aliases);
     var valueType = type(matches[2].trim(), aliases);
-    return { baseName: 'Array', genericArguments: [ keyType, valueType ] };
+    return { baseName: 'Dictionary', genericArguments: [ keyType, valueType ] };
+  }
+
+  if (isDictionary) {
+    var matches = typeString.match(/\[(.*):(.*)\]/);
+
+    if (matches.length != 3)
+      throw new Error('"' + typeString + '" appears to be a Dictionary, but isn\'t');
+
+    var keyType = type(matches[1].trim(), aliases);
+    var valueType = type(matches[2].trim(), aliases);
+    return { baseName: 'Dictionary', genericArguments: [ keyType, valueType ] };
+  }
+
+  if (isGeneric) {
+    var baseName = typeString.replace(/<([^>]*)>/g, '');
+    var matches = typeString.match(/\<(.*)>/);
+
+    if (matches.length != 2)
+      throw new Error('"' + typeString + '" appears to be a generic type, but isn\'t');
+
+    var types = matches[1]
+      .split(',')
+      .map(t => t.trim())
+      .map(mkType);
+
+    return { baseName: baseName, genericArguments: types };
   }
 
   return { baseName: typeString, genericArguments: [] };
+}
+
+function mkType(name: string) : Type {
+  return { baseName: name, genericArguments: [] };
 }
 
 // Based on: https://github.com/arian/LISP.js
