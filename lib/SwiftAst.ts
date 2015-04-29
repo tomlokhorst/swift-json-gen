@@ -17,7 +17,7 @@ interface Array<T> {
 
   children(name: String): Array<T>;
 
-  flatten(): Array<T>;
+  flatMap<U>(f: (arg: T) => Array<U>): Array<U>;
 }
 
 interface String {
@@ -104,9 +104,11 @@ Array.prototype.children = function (name) {
   return arrays;
 }
 
-Array.prototype.flatten = function () {
+Array.prototype.flatMap = function (f) {
+  var nested = this.map(f);
+
   var merged = [];
-  return merged.concat.apply(merged, this);
+  return merged.concat.apply(merged, nested);
 }
 
 String.prototype.unquote = function () {

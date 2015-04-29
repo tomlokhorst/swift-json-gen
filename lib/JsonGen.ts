@@ -9,50 +9,65 @@ var fs = require('fs')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
+interface FileDesc {
+  filename: string;
+  fullname: string;
+  outfile: string;
+  outbase: string;
+}
+
+function fileDescriptions(input: string) : Array<FileDesc> {
+  var files : Array<FileDesc> = [];
+
+  if (fs.statSync(input).isFile()) {
+    var filename = input;
+    var dirname = path.dirname(filename)
+    var basename = path.basename(filename)
+    var outbase = basename.replace('.swift', '+JsonDecode.swift');
+    var outputFilename = basename.replace('.swift', '+JsonDecode.swift');
+
+    var file = {
+      filename: basename,
+      fullname: path.join(dirname, basename),
+      outbase: outbase,
+      outfile: path.join(dirname, basename.replace('.swift', '+JsonDecode.swift')),
+    }
+    files = [file]
+  }
+
+  if (fs.statSync(input).isDirectory()) {
+    var directory = input;
+
+    files = fs.readdirSync(directory)
+      .map(function (fn) {
+        return {
+          filename: fn,
+          fullname: path.join(directory, fn),
+          outbase: fn.replace('.swift', '+JsonDecode.swift'),
+          outfile: path.join(directory, fn.replace('.swift', '+JsonDecode.swift')),
+        }
+      })
+      .filter(function (f) {
+        var isDecode = f.filename.indexOf('+JsonDecode.swift') > 0;
+        var isSwift = f.filename.indexOf('.swift') > 0;
+
+        return isSwift && !isDecode;
+      });
+  }
+
+  return files;
+}
+
 function generate() {
   var argv = process.argv;
 
   if (argv.length < 3) {
-    console.log('USAGE: node JsonGen.js some/directory/FileWithStructs.swift');
+    console.log('USAGE: swift-json-gen some/directory/FileWithStructs.swift');
     console.log('');
   }
   else {
-    var input = argv[2];
-    var files = [];
-
-    if (fs.statSync(input).isFile()) {
-      var filename = input;
-      var dirname = path.dirname(filename)
-      var basename = path.basename(filename)
-      var outputFilename = basename.replace('.swift', '+JsonDecode.swift');
-
-      var file = {
-        filename: basename,
-        fullname: path.join(dirname, basename),
-        outfile: path.join(dirname, basename.replace('.swift', '+JsonDecode.swift')),
-      }
-      files = [file]
-    }
-
-    if (fs.statSync(input).isDirectory()) {
-      var directory = input;
-
-      files = fs.readdirSync(directory)
-        .map(function (fn) {
-          return {
-            filename: fn,
-            fullname: path.join(directory, fn),
-            outbase: fn.replace('.swift', '+JsonDecode.swift'),
-            outfile: path.join(directory, fn.replace('.swift', '+JsonDecode.swift')),
-          }
-        })
-        .filter(function (f) {
-          var isDecode = f.filename.indexOf('+JsonDecode.swift') > 0;
-          var isSwift = f.filename.indexOf('.swift') > 0;
-
-          return isSwift && !isDecode;
-        });
-    }
+    var inputs = argv.slice(2);
+    var files = inputs.flatMap(fileDescriptions);
 
     var filenames = files.map(f => '"' + f.fullname + '"').join(' ');
   
@@ -74,7 +89,7 @@ function generate() {
       }
       else {
         var fileAsts = ast.parse(stderr, true);
-        var typeAliases = fileAsts.map(printer.typeAliases).flatten()
+        var typeAliases = fileAsts.flatMap(printer.typeAliases);
 
         if (fileAsts.length == files.length) {
           for (var i = 0; i < files.length; i++) {
