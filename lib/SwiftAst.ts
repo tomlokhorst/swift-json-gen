@@ -7,6 +7,26 @@ interface Struct {
   data: any[];
 }
 
+interface TypeAliases {
+  [name: string]: string;
+}
+
+function typeAliases(ast: any[]): TypeAliases {
+  var aliases: TypeAliases = {};
+
+  ast.children('typealias')
+    .forEach(function (t) {
+      var name = t.fields().name().unquote();
+      var type = t.attrs().filter(attr => attr[0] == 'type' )[1][1]
+
+      aliases[name] = type;
+    });
+
+  return aliases;
+}
+
+exports.typeAliases = typeAliases
+
 function structs(ast: any[]) : Struct[] {
   return ast.children('struct_decl').flatMap(a => struct(a));
 }

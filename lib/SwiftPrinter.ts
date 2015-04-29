@@ -4,26 +4,7 @@
 
 var ast = require('./SwiftAst')
 
-function typeAliases(ast) {
-  return ast.children()
-    .filter(function (a) {
-      return a.name() == 'typealias'
-    }).map(function (t) {
-      var name = t.fields().name().unquote();
-      var type = t.attrs().filter(function(a) { return a[0] == 'type' })[1][1]
-
-      return { name: name, type: type };
-    });
-}
-
-exports.typeAliases = typeAliases;
-
-function makeFile(file, typeAliases, filename) {
-  var aliases = {}
-  typeAliases.forEach(function (alias) {
-    aliases[alias.name] = alias.type;
-  });
-
+function makeFile(file: any[], aliases: TypeAliases, filename: string) {
   var lines = [];
 
   lines.push('//');

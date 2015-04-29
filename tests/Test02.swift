@@ -1,7 +1,9 @@
 import Foundation
 
+typealias MyInt = Int
+
 struct Test02 {
-  let one: Int
+  let one: MyInt
   let two: String?
   let sub: Sub
 }
