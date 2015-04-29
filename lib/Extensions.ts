@@ -25,6 +25,7 @@ interface String {
 
   startsWith(searchString: String, position?: Number): Boolean;
   endsWith(searchString: String, position?: Number): Boolean;
+  contains(searchString: String, position?: Number): Boolean;
 }
 
 Array.prototype.name = function () {
@@ -139,6 +140,12 @@ if (!String.prototype.endsWith) {
       return lastIndex !== -1 && lastIndex === position;
     }
   });
+}
+
+if (!String.prototype.contains) {
+  String.prototype.contains = function() {'use strict';
+    return String.prototype.indexOf.apply(this, arguments) !== -1;
+  };
 }
 
 function not(f) {

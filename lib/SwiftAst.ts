@@ -2,13 +2,24 @@
 // A parse function for parsing the AST dump from the swift compiler.
 //
 
-interface Struct {
-  baseName: string;
-  data: any[];
-}
-
 interface TypeAliases {
   [name: string]: string;
+}
+
+interface Struct {
+  baseName: string;
+  varDecls: VarDecl[];
+}
+
+interface VarDecl {
+  name: string;
+  type: Type;
+}
+
+interface Type {
+  alias?: string;
+  baseName: string;
+  genericArguments: Type[];
 }
 
 function typeAliases(ast: any[]): TypeAliases {
@@ -27,24 +38,68 @@ function typeAliases(ast: any[]): TypeAliases {
 
 exports.typeAliases = typeAliases
 
-function structs(ast: any[]) : Struct[] {
-  return ast.children('struct_decl').flatMap(a => struct(a));
+function structs(ast: any[], aliases: TypeAliases) : Struct[] {
+  return ast.children('struct_decl').flatMap(a => struct(a, aliases));
 }
 
 exports.structs = structs;
 
-function struct(ast: any[], prefix?: string) : Struct[] {
+function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
 
   prefix = prefix ? prefix + '.' : '';
 
   // strip generic type
   var fullName = ast.key(0);
   var baseName = prefix + fullName.replace(/<([^>]*)>/g, '' );
+  var varDecls = ast.children('var_decl').map(a => varDecl(a, aliases));
 
-  var r = { baseName: baseName, data: ast };
-  var rs = ast.children('struct_decl').flatMap(a => struct(a, baseName));
+  var r = { baseName: baseName, varDecls: varDecls };
+  var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));
 
   return [r].concat(rs);
+}
+
+function varDecl(ast: any, aliases: TypeAliases) : VarDecl {
+  return { name: ast.key(0), type: type(ast.attr('type'), aliases) };
+}
+
+function type(typeString: string, aliases: TypeAliases) : Type {
+
+  if (aliases[typeString]) {
+    var resolved = type(aliases[typeString], aliases);
+    resolved.alias = typeString
+    return resolved;
+  }
+
+  var isWrapped = typeString.startsWith('[') && typeString.endsWith(']');
+
+  var isDictionary = isWrapped && typeString.contains(':');
+  var isArray = isWrapped && !typeString.contains(':');
+  var isOptional = typeString.endsWith('?');
+
+  if (isOptional) {
+    var inner = typeString.substring(0, typeString.length - 1).trim();
+    return { baseName: 'Optional', genericArguments: [ type(inner, aliases) ] };
+  }
+
+  if (isArray) {
+    var inner = typeString.substring(1, typeString.length - 1).trim();
+    return { baseName: 'Array', genericArguments: [ type(inner, aliases) ] };
+  }
+
+  if (isDictionary) {
+    var inner = typeString.substring(1, typeString.length - 1).trim();
+    var matches = inner.match(/\[(.*):(.*)\]/);
+
+    if (matches.length != 3)
+      throw '"' + typeString + '" appears to be a Dictionary, but isn\'t';
+
+    var keyType = type(matches[1].trim(), aliases);
+    var valueType = type(matches[2].trim(), aliases);
+    return { baseName: 'Array', genericArguments: [ keyType, valueType ] };
+  }
+
+  return { baseName: typeString, genericArguments: [] };
 }
 
 // Based on: https://github.com/arian/LISP.js

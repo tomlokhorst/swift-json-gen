@@ -73,13 +73,13 @@ extension NSDate
 }
 
 extension Optional {
-  static func decode(decodeT: AnyObject -> T?)(json: AnyObject) -> T? {
+  static func decode(decodeT: AnyObject -> T?)(_ json: AnyObject) -> T? {
     return decodeT(json)
   }
 }
 
 extension Array {
-  static func decode(decodeT: AnyObject -> T?)(json: AnyObject) -> [T]? {
+  static func decode(decodeT: AnyObject -> T?)(_ json: AnyObject) -> [T]? {
     if let arr = json as? [AnyObject] {
       let decoded = arr.map(decodeT)
 
@@ -95,7 +95,7 @@ extension Array {
 }
 
 extension Dictionary {
-  static func decode(decodeValue: AnyObject -> Value?)(json: AnyObject) -> [String: Value]? {
+  static func decode(decodeValue: AnyObject -> Value?)(_ json: AnyObject) -> [String: Value]? {
     var result = [String: Value]()
 
     if let dict = json as? [String: AnyObject] {
