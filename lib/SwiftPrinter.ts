@@ -2,6 +2,8 @@
 // Several functions for generating Swift code based on the parsed AST.
 //
 
+var ast = require('./SwiftAst')
+
 function typeAliases(ast) {
   return ast.children()
     .filter(function (a) {
@@ -33,10 +35,10 @@ function makeFile(file, typeAliases, filename) {
   lines.push('import Foundation');
   lines.push('');
 
-  var structs = file.children('struct_decl');
+  var structs = ast.structs(file);
   structs.forEach(function (s) {
-    var name = s.key(0);
-    var decls = s.children('var_decl');
+    var name = s.baseName;
+    var decls = s.data.children('var_decl');
 
     lines = lines.concat(makeExtension(name, decls, aliases));
     lines.push('');
@@ -47,13 +49,10 @@ function makeFile(file, typeAliases, filename) {
 
 exports.makeFile = makeFile;
 
-function makeExtension(fullType, decls, typeAliases) {
-  // strip generic type
-  var baseTypeName = fullType.replace(/<([^>]*)>/g, '' );
-
+function makeExtension(baseName, decls, typeAliases) {
   var pre = [
-    'extension ' + baseTypeName + ' {',
-    '  static func decode(json : AnyObject) -> ' + baseTypeName + '? {',
+    'extension ' + baseName + ' {',
+    '  static func decode(json : AnyObject) -> ' + baseName + '? {',
     '    let _dict = json as? [String : AnyObject]',
     '    if _dict == nil { return nil }',
     '    let dict = _dict!',
@@ -72,7 +71,7 @@ function makeExtension(fullType, decls, typeAliases) {
     lines = lines.concat(subs);
   });
 
-  lines = lines.concat(indent(4)(makeReturn(baseTypeName, fields)));
+  lines = lines.concat(indent(4)(makeReturn(baseName, fields)));
   lines = lines.concat(post);
 
   return lines.join('\n');

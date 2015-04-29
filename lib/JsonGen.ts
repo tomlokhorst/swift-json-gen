@@ -6,6 +6,7 @@ var exec = require('child_process').exec
 var path = require('path')
 var fs = require('fs')
 
+require('./Extensions')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
