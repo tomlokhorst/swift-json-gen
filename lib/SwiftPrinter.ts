@@ -132,7 +132,7 @@ function makeField(field: VarDecl, structTypeArguments: string[]) {
   var name = field.name;
   var type = field.type;
   var fieldName = name + '_field';
-  var valueName = name + '_value';
+  var valueName = name + '_optional';
   var typeString = typeToString(type);
 
   var lines = [
