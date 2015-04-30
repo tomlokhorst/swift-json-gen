@@ -16,3 +16,14 @@ struct Sub2<A, B> {
   let c: [[B?]?]?
 }
 
+struct Sub3<A, B, C> {
+  let a: A
+  let b: B?
+  let c: [C]
+}
+
+extension Sub3 {
+  func decode() {
+    println("hello")
+  }
+}

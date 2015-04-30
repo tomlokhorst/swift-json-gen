@@ -6,10 +6,18 @@ interface TypeAliases {
   [name: string]: string;
 }
 
+interface Decoder {
+  typeBaseName: string;
+}
+
 interface Struct {
   baseName: string;
   typeArguments: string[];
   varDecls: VarDecl[];
+}
+
+interface Extension {
+  typeBaseName: string;
 }
 
 interface VarDecl {
@@ -23,7 +31,44 @@ interface Type {
   genericArguments: Type[];
 }
 
-function typeAliases(ast: any[]): TypeAliases {
+function decoders(ast: any[]) : Decoder[] {
+  var emptyAliases: TypeAliases = {};
+  var ds1 = ast
+    .children('struct_decl')
+    .map(s => hasDecoder(s) ? struct(s, emptyAliases)[0].baseName : null)
+  var ds2 = ast
+    .children('extension_decl')
+    .map(s => hasDecoder(s) ? extension(s).typeBaseName : null)
+
+  var ds = ds1.concat(ds2)
+    .filter(n => n != null)
+    .map(d => { return { typeBaseName: d } });
+
+  return ds;
+}
+
+exports.decoders = decoders;
+
+function hasDecoder(ast: any[]) : boolean {
+  var xs = ast.children('func_decl').filter(f => f.key(0) == 'decode')
+
+  return xs.length > 0
+}
+
+function extension(ast: any[]) : Extension {
+  var fullName = ast.key(0);
+  var keys = ast.keys().slice(1);
+
+  while (fullName.contains('<') && !fullName.contains('>') && keys.length > 0) {
+    fullName += keys.splice(0, 1)[0]
+  }
+
+  var baseName = fullName.replace(/<([^>]*)>/g, '');
+
+  return { typeBaseName: baseName };
+}
+
+function typeAliases(ast: any[]) : TypeAliases {
   var aliases: TypeAliases = {};
 
   ast.children('typealias')

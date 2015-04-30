@@ -6,26 +6,27 @@
 //
 
 interface Array<T> {
-  name(): String;
+  name(): string;
   fields(): Array<T>;
+  contains(elem: T): boolean;
 
-  keys(): Array<String>;
-  key(ix: Number): String;
+  keys(): Array<string>;
+  key(ix: Number): string;
 
-  attrs(): Array<String>;
-  attr(key: String): String;
+  attrs(): Array<string>;
+  attr(key: string): string;
 
-  children(name: String): Array<T>;
+  children(name: string): Array<T>;
 
   flatMap<U>(f: (arg: T) => Array<U>): Array<U>;
 }
 
 interface String {
-  unquote(): String;
+  unquote(): string;
 
-  startsWith(searchString: String, position?: Number): Boolean;
-  endsWith(searchString: String, position?: Number): Boolean;
-  contains(searchString: String, position?: Number): Boolean;
+  startsWith(searchString: string, position?: Number): Boolean;
+  endsWith(searchString: string, position?: Number): Boolean;
+  contains(searchString: string, position?: Number): Boolean;
 }
 
 Array.prototype.name = function () {
@@ -39,10 +40,16 @@ Array.prototype.fields = function () {
   return fields;
 }
 
+Array.prototype.contains = function (elem) {
+  return this.indexOf(elem) > -1;
+}
+
 Array.prototype.keys = function () {
   return this.fields()
     .filter(not(isAttr))
     .map(function (s) {
+      if (typeof(s) != 'string') return s;
+
       var val = s.replace(/'/g, '"');
 
       if (val.length && val[0] == '"')

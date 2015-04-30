@@ -4,7 +4,7 @@
 
 var ast = require('./SwiftAst')
 
-function makeFile(file: any[], aliases: TypeAliases, filename: string) {
+function makeFile(file: any[], aliases: TypeAliases, decoders: Decoder[], filename: string) {
   var lines = [];
 
   lines.push('//');
@@ -16,7 +16,11 @@ function makeFile(file: any[], aliases: TypeAliases, filename: string) {
   lines.push('import Foundation');
   lines.push('');
 
-  var structs = ast.structs(file, aliases);
+  function decoderExists(struct: Struct) : boolean {
+    return decoders.map(d => d.typeBaseName).contains(struct.baseName);
+  }
+
+  var structs = ast.structs(file, aliases).filter(s => !decoderExists(s));
   structs.forEach(function (s) {
     lines = lines.concat(makeExtension(s));
     lines.push('');
@@ -81,9 +85,9 @@ function isCastType(type: string) : boolean {
   return type == 'JsonObject' || type == 'JsonArray';
 }
 
-function decodeFunction(type: Type, decoders: string[]) : string {
+function decodeFunction(type: Type, genericDecoders: string[]) : string {
   var args = type.genericArguments
-    .map(a => decodeFunctionArgument(a, decoders))
+    .map(a => decodeFunctionArgument(a, genericDecoders))
     .join('');
 
   var typeName = type.alias || type.baseName;
@@ -94,13 +98,13 @@ function decodeFunction(type: Type, decoders: string[]) : string {
   if (isCastType(typeName))
     return '{ $0 as? ' + typeName + ' }';
 
-  if (decoders.indexOf(typeName) > -1)
+  if (genericDecoders.contains(typeName))
     return 'decode' + typeName + args
 
   return typeName + '.decode' + args;
 }
 
-function decodeFunctionArgument(type: Type, decoders: string[]) : string {
+function decodeFunctionArgument(type: Type, genericDecoders: string[]) : string {
 
   if (isKnownType(type.baseName))
     return '{ $0 as ' + type.baseName + ' }';
@@ -108,7 +112,7 @@ function decodeFunctionArgument(type: Type, decoders: string[]) : string {
   if (isCastType(type.baseName))
     return '{ $0 as? ' + type.baseName + ' }';
 
-  return '({ ' + decodeFunction(type, decoders) + '($0) })'
+  return '({ ' + decodeFunction(type, genericDecoders) + '($0) })'
 }
 
 function typeToString(type: Type) : string {
@@ -154,7 +158,7 @@ function makeField(field: VarDecl, structTypeArguments: string[]) {
       lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
     }
     else {
-      lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type, structTypeArguments    ) + '(' + fieldName + '!)')
+      lines.push('let ' + valueName + ': ' + typeString + '? = ' + decodeFunction(type, structTypeArguments) + '(' + fieldName + '!)')
       lines.push('if ' + valueName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
       lines.push('let ' + name + ': ' + typeString + ' = ' + valueName + '!');
     }
