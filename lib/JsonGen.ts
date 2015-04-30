@@ -48,12 +48,6 @@ function fileDescriptions(input: string) : Array<FileDesc> {
           outfile: path.join(directory, fn.replace('.swift', '+JsonDecode.swift')),
         }
       })
-      .filter(function (f) {
-        var isDecode = f.filename.indexOf('+JsonDecode.swift') > 0;
-        var isSwift = f.filename.indexOf('.swift') > 0;
-
-        return isSwift && !isDecode;
-      });
   }
 
   return files;
@@ -68,7 +62,14 @@ function generate() {
   }
   else {
     var inputs = argv.slice(2);
-    var files = inputs.flatMap(fileDescriptions);
+    var files = inputs
+      .flatMap(fileDescriptions)
+      .filter(function (f) {
+        var isDecode = f.filename.indexOf('+JsonDecode.swift') > 0;
+        var isSwift = f.filename.indexOf('.swift') > 0;
+
+        return isSwift && !isDecode;
+      });
 
     var filenames = files.map(f => '"' + f.fullname + '"').join(' ');
   
@@ -82,29 +83,21 @@ function generate() {
         return;
       }
 
-      if (files.length == 1) {
-        var fileAst = ast.parse(stderr);
-        var typeAliases = ast.typeAliases(fileAst);
-
-        printFile(fileAst, typeAliases, files[0].outbase, files[0].outfile);
+      var xcoutputs = stderr.split(/\n\(source_file/g)
+      if (xcoutputs.length != files.length) {
+        console.error('inconsistency; xcoutputs not equal in length to files');
+        console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
       }
-      else {
-        var fileAsts = ast.parse(stderr, true);
-        var mergedFileAsts = [].concat.apply([], fileAsts);
-        var typeAliases = ast.typeAliases(mergedFileAsts);
 
-        if (fileAsts.length == files.length) {
-          for (var i = 0; i < files.length; i++) {
-            var file = files[i];
-            if (file.filename == 'JsonDecode.swift') continue;
+      var fileAsts = xcoutputs.map(ast.parse);
+      var mergedFileAsts = [].concat.apply([], fileAsts);
+      var typeAliases = ast.typeAliases(mergedFileAsts);
 
-            printFile(fileAsts[i], typeAliases, file.outbase, file.outfile);
-          }
-        }
-        else {
-          console.error('inconsistency; fileAsts not equal in length to files');
-          console.error('fileAsts.length: ' + fileAsts.length + ', files: ' + files.length);
-        }
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        if (file.filename == 'JsonDecode.swift') continue;
+
+        printFile(fileAsts[i], typeAliases, file.outbase, file.outfile);
       }
     });
   }
