@@ -2,12 +2,19 @@
 // A parse function for parsing the AST dump from the swift compiler.
 //
 
-interface TypeAliases {
-  [name: string]: string;
+interface GlobalAttrs {
+  typeAliases: { [ix: string]: string };
+  decoders: string[];
+  encoders: string[];
 }
 
-interface Decoder {
-  typeBaseName: string;
+interface TypeFuncNames {
+  typeName: string;
+  funcNames: string[];
+}
+
+interface TypeAliases {
+  [ix: string]: string;
 }
 
 interface Struct {
@@ -31,28 +38,48 @@ interface Type {
   genericArguments: Type[];
 }
 
-function decoders(ast: any[]) : Decoder[] {
+function globalAttrs(ast: any[]) : GlobalAttrs {
+  var tfns = typeFuncNames(ast);
+  var decoders = tfns
+    .filter(d => d.funcNames.contains('decode'))
+    .map(d => d.typeName);
+  var encoders = tfns
+    .filter(d => d.funcNames.contains('encodeJson'))
+    .map(d => d.typeName);
+
+  return {
+    typeAliases: typeAliases(ast),
+    decoders: decoders,
+    encoders: encoders,
+  }
+}
+
+exports.globalAttrs = globalAttrs;
+
+function typeFuncNames(ast: any[]) : TypeFuncNames[] {
   var emptyAliases: TypeAliases = {};
   var ds1 = ast
     .children('struct_decl')
-    .map(s => hasDecoder(s) ? struct(s, emptyAliases)[0].baseName : null)
+    .map(s => {
+      return {
+        typeName: struct(s, emptyAliases)[0].baseName,
+        funcNames: funcNames(s)
+      }
+    });
   var ds2 = ast
     .children('extension_decl')
-    .map(s => hasDecoder(s) ? extension(s).typeBaseName : null)
+    .map(s => {
+      return {
+        typeName: extension(s).typeBaseName,
+        funcNames: funcNames(s)
+      }
+    });
 
-  var ds = ds1.concat(ds2)
-    .filter(n => n != null)
-    .map(d => { return { typeBaseName: d } });
-
-  return ds;
+  return ds1.concat(ds2);
 }
 
-exports.decoders = decoders;
-
-function hasDecoder(ast: any[]) : boolean {
-  var xs = ast.children('func_decl').filter(f => f.key(0) == 'decode')
-
-  return xs.length > 0
+function funcNames(ast: any[]) : string[] {
+  return ast.children('func_decl').map(f => f.key(0))
 }
 
 function extension(ast: any[]) : Extension {
@@ -81,8 +108,6 @@ function typeAliases(ast: any[]) : TypeAliases {
 
   return aliases;
 }
-
-exports.typeAliases = typeAliases
 
 function structs(ast: any[], aliases: TypeAliases) : Struct[] {
   return ast.children('struct_decl').flatMap(a => struct(a, aliases));

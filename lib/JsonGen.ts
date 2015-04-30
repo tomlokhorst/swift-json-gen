@@ -91,21 +91,20 @@ function generate() {
 
       var fileAsts = xcoutputs.map(ast.parse);
       var mergedFileAsts = [].concat.apply([], fileAsts);
-      var typeAliases = ast.typeAliases(mergedFileAsts);
-      var decoders = ast.decoders(mergedFileAsts);
+      var globalAttrs = ast.globalAttrs(mergedFileAsts);
 
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
         if (file.filename == 'JsonDecode.swift') continue;
 
-        printFile(fileAsts[i], typeAliases, decoders, file.outbase, file.outfile);
+        printFile(fileAsts[i], globalAttrs, file.outbase, file.outfile);
       }
     });
   }
 }
 
-function printFile(file, typeAliases, decoders, outbase, outfile) {
-  var lines = printer.makeFile(file, typeAliases, decoders, outbase);
+function printFile(file, globalAttrs, outbase, outfile) {
+  var lines = printer.makeFile(file, globalAttrs, outbase);
   var text = lines.join('\n');
 
   fs.writeFile(outfile, text, err => {
