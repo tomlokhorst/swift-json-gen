@@ -24,14 +24,14 @@ function fileDescriptions(input: string) : Array<FileDesc> {
     var filename = input;
     var dirname = path.dirname(filename)
     var basename = path.basename(filename)
-    var outbase = basename.replace('.swift', '+JsonDecode.swift');
-    var outputFilename = basename.replace('.swift', '+JsonDecode.swift');
+    var outbase = basename.replace('.swift', '+JsonGen.swift');
+    var outputFilename = basename.replace('.swift', '+JsonGen.swift');
 
     var file = {
       filename: basename,
       fullname: path.join(dirname, basename),
       outbase: outbase,
-      outfile: path.join(dirname, basename.replace('.swift', '+JsonDecode.swift')),
+      outfile: path.join(dirname, basename.replace('.swift', '+JsonGen.swift')),
     }
     files = [file]
   }
@@ -44,8 +44,8 @@ function fileDescriptions(input: string) : Array<FileDesc> {
         return {
           filename: fn,
           fullname: path.join(directory, fn),
-          outbase: fn.replace('.swift', '+JsonDecode.swift'),
-          outfile: path.join(directory, fn.replace('.swift', '+JsonDecode.swift')),
+          outbase: fn.replace('.swift', '+JsonGen.swift'),
+          outfile: path.join(directory, fn.replace('.swift', '+JsonGen.swift')),
         }
       })
   }
@@ -65,10 +65,10 @@ function generate() {
     var files = inputs
       .flatMap(fileDescriptions)
       .filter(function (f) {
-        var isDecode = f.filename.indexOf('+JsonDecode.swift') > 0;
+        var isJsonGen = f.filename.indexOf('+JsonGen.swift') > 0;
         var isSwift = f.filename.indexOf('.swift') > 0;
 
-        return isSwift && !isDecode;
+        return isSwift && !isJsonGen;
       });
 
     var filenames = files.map(f => '"' + f.fullname + '"').join(' ');
@@ -98,7 +98,7 @@ function generate() {
 
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        if (file.filename == 'JsonDecode.swift') continue;
+        if (file.filename == 'JsonGen.swift') continue;
 
         printFile(fileAsts[i], globalAttrs, file.outbase, file.outfile);
       }

@@ -1,7 +1,7 @@
 //
-//  JsonDecode.swift
+//  JsonGen.swift
 //
-//  Decoders for some base Swift and Foundation types.
+//  Json encoders and decoders for some base Swift and Foundation types.
 //
 
 import Foundation
@@ -11,7 +11,7 @@ typealias JsonObject = [String: AnyJson]
 typealias JsonArray = [AnyJson]
 
 extension String {
-  static func decode(json: AnyObject) -> String? {
+  static func decodeJson(json: AnyObject) -> String? {
     return json as? String
   }
 
@@ -21,7 +21,7 @@ extension String {
 }
 
 extension Bool {
-  static func decode(json: AnyObject) -> Bool? {
+  static func decodeJson(json: AnyObject) -> Bool? {
     return json as? Bool
   }
 
@@ -31,7 +31,7 @@ extension Bool {
 }
 
 extension Int {
-  static func decode(json: AnyObject) -> Int? {
+  static func decodeJson(json: AnyObject) -> Int? {
     return json as? Int
   }
 
@@ -41,7 +41,7 @@ extension Int {
 }
 
 extension Int64 {
-  static func decode(json: AnyObject) -> Int64? {
+  static func decodeJson(json: AnyObject) -> Int64? {
     let number = json as? NSNumber
     return number.map { $0.longLongValue }
   }
@@ -52,7 +52,7 @@ extension Int64 {
 }
 
 extension Float {
-  static func decode(json : AnyObject) -> Float? {
+  static func decodeJson(json : AnyObject) -> Float? {
     let number = json as? NSNumber
     return number.map { $0.floatValue }
   }
@@ -63,7 +63,7 @@ extension Float {
 }
 
 extension Double {
-  static func decode(json : AnyObject) -> Double? {
+  static func decodeJson(json : AnyObject) -> Double? {
     let number = json as? NSNumber
     return number.map { $0.doubleValue }
   }
@@ -74,7 +74,7 @@ extension Double {
 }
 
 extension NSDictionary {
-  class func decode(json: AnyObject) -> NSDictionary? {
+  class func decodeJson(json: AnyObject) -> NSDictionary? {
     return json as? NSDictionary
   }
 
@@ -84,7 +84,7 @@ extension NSDictionary {
 }
 
 extension NSURL {
-  class func decode(json: AnyObject) -> NSURL? {
+  class func decodeJson(json: AnyObject) -> NSURL? {
     if let str = json as? String {
       return NSURL(string: str)
     }
@@ -99,7 +99,7 @@ extension NSURL {
 
 extension NSDate
 {
-  struct JsonDecodeDateFormatter {
+  struct JsonGenDateFormatter {
     static let withTimeZone : NSDateFormatter = {
       let formatter = NSDateFormatter()
       formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
@@ -108,21 +108,21 @@ extension NSDate
       }()
   }
 
-  class func decode(json : AnyObject) -> NSDate? {
+  class func decodeJson(json : AnyObject) -> NSDate? {
     if let dateString = json as? String {
-      return JsonDecodeDateFormatter.withTimeZone.dateFromString(dateString)
+      return JsonGenDateFormatter.withTimeZone.dateFromString(dateString)
     }
 
     return nil
   }
 
   func encodeJson() -> AnyObject {
-    return JsonDecodeDateFormatter.withTimeZone.stringFromDate(self)
+    return JsonGenDateFormatter.withTimeZone.stringFromDate(self)
   }
 }
 
 extension Optional {
-  static func decode(decodeT: AnyObject -> T?, _ json: AnyObject) -> T? {
+  static func decodeJson(decodeT: AnyObject -> T?, _ json: AnyObject) -> T? {
     return decodeT(json)
   }
 
@@ -132,7 +132,7 @@ extension Optional {
 }
 
 extension Array {
-  static func decode(decodeT: AnyObject -> T?, _ json: AnyObject) -> [T]? {
+  static func decodeJson(decodeT: AnyObject -> T?, _ json: AnyObject) -> [T]? {
     if let arr = json as? [AnyObject] {
       let decoded = arr.map(decodeT)
 
@@ -152,7 +152,7 @@ extension Array {
 }
 
 extension Dictionary {
-  static func decode(decodeKey: AnyObject -> Key?, _ decodeValue: AnyObject -> Value?, _ json: AnyObject) -> [Key: Value]? {
+  static func decodeJson(decodeKey: AnyObject -> Key?, _ decodeValue: AnyObject -> Value?, _ json: AnyObject) -> [Key: Value]? {
     var result = [Key: Value]()
 
     if let dict = json as? [Key: AnyObject] {

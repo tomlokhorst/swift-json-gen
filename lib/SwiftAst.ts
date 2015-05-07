@@ -41,7 +41,7 @@ interface Type {
 function globalAttrs(ast: any[]) : GlobalAttrs {
   var tfns = typeFuncNames(ast);
   var decoders = tfns
-    .filter(d => d.funcNames.contains('decode'))
+    .filter(d => d.funcNames.contains('decodeJson'))
     .map(d => d.typeName);
   var encoders = tfns
     .filter(d => d.funcNames.contains('encodeJson'))

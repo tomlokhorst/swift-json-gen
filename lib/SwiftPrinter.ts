@@ -44,7 +44,7 @@ function makeExtension(struct: Struct, createDecoder: boolean, createEncoder: bo
   lines.push('extension ' + struct.baseName + ' {')
 
   if (createDecoder) {
-    lines.push('  static func decode' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
+    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
     lines.push('    let _dict = json as? [String : AnyObject]');
     lines.push('    if _dict == nil { return nil }');
     lines.push('    let dict = _dict!');
@@ -177,7 +177,7 @@ function decodeFunction(arg: string, type: Type, genericDecoders: string[]) : st
   if (genericDecoders.contains(typeName))
     return 'decode' + typeName + '(' + args + ')'
 
-  return typeName + '.decode(' + args + ')';
+  return typeName + '.decodeJson(' + args + ')';
 }
 
 function decodeFunctionArgument(type: Type, genericDecoders: string[]) : string {
