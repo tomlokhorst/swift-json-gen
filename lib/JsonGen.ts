@@ -74,8 +74,11 @@ function generate() {
     var filenames = files.map(f => '"' + f.fullname + '"').join(' ');
   
     var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenames
+    var opts = {
+      maxBuffer: 200*1024*1024
+    }
   
-    exec(cmd, function (error, stdout, stderr) {
+    exec(cmd, opts, function (error, stdout, stderr) {
 
       // If an actual error, print and stop
       if (stderr.indexOf('(') != 0) {
