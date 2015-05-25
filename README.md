@@ -3,9 +3,6 @@
 
 Generate Json encoders and decoders based on Swift structs.
 
-This is all quickly hacked together for my current project.
-Let me know if you find this useful!
-
 
 How it works
 ------------
@@ -42,9 +39,9 @@ like enums and classes.
 Installation
 ------------
 
-Clone this repository and install the package globally:
+Install the latest release from NPM:
 
-    > npm install -g
+    > npm install swift-json-gen
     
 Also copy `example/JsonGen.swift` into your own project.
 This file contains some encoders and decoders for default Swift and Foundation
