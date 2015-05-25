@@ -135,3 +135,8 @@ Edit the `.ts` files and compile the code as follows:
 
     > tsc lib/*.ts
 
+
+Licence & Credits
+-----------------
+
+JsonGen is written by [Tom Lokhorst](https://twitter.com/tomlokhorst) of [Q42](http://q42.com) and available under the [MIT license](https://github.com/tomlokhorst/swift-json-gen/blob/develop/LICENSE), so feel free to use it in commercial and non-commercial projects.

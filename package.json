@@ -1,11 +1,11 @@
 {
   "name": "swift-json-gen",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Generate Swift Json encoders and decoders based on Swift structs.",
   "main": "lib/JsonGen",
   "bin": {
     "swift-json-gen": "./bin/swift-json-gen"
   },
   "author": "Tom Lokhorst",
-  "license": "BSD"
+  "license": "MIT"
 }
