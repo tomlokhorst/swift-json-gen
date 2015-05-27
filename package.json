@@ -6,6 +6,7 @@
   "bin": {
     "swift-json-gen": "./bin/swift-json-gen"
   },
+  "homepage": "https://github.com/tomlokhorst/swift-json-gen",
   "author": "Tom Lokhorst",
   "license": "MIT"
 }
