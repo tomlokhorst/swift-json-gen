@@ -1,7 +1,33 @@
 <img src="https://cloud.githubusercontent.com/assets/75655/5062099/8cc5f3f8-6db3-11e4-8620-c3da216c1262.png" width="218" alt="Swift JsonGen">
 <hr>
 
-Generate Json encoders and decoders based on Swift structs.
+JsonGen generates source code files with decoders and encoders for parsing JSON
+into immutable Swift structs.
+
+Features
+--------
+
+ * Generates an extension with a `decodeJson` and `encodeJson` method for each struct
+ * Works on individual `.swift` files or whole directories
+ * Handles type aliases
+ * Supports primitive types, nested types and custom generic types
+ * Allow for part of the datastructure to remain untyped
+
+See also the blog post:
+[Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation) 
+
+
+Installation
+------------
+
+Install the latest release from NPM:
+
+    > npm install swift-json-gen
+    
+Also copy [`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift)
+into your own project.
+This file contains some encoders and decoders for default Swift and Foundation
+types.
 
 
 How it works
@@ -33,19 +59,7 @@ If you want to differ from the default generated code you can provide your own
 function will be generated.
 
 You also need to provide your own functions for kinds that are not supported,
-like enums and classes.  
-
-
-Installation
-------------
-
-Install the latest release from NPM:
-
-    > npm install swift-json-gen
-    
-Also copy `example/JsonGen.swift` into your own project.
-This file contains some encoders and decoders for default Swift and Foundation
-types.
+like enums and classes.
 
 
 Example
