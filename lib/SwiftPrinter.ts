@@ -4,7 +4,7 @@
 
 var ast = require('./SwiftAst')
 
-function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string) {
+function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outputFileExists: boolean): string[] {
 
   function decoderExists(struct: Struct) : boolean {
     return globalAttrs.decoders.contains(struct.baseName);
@@ -12,6 +12,15 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string) {
 
   function encoderExists(struct: Struct) : boolean {
     return globalAttrs.encoders.contains(struct.baseName);
+  }
+
+  var structs = ast.structs(file, globalAttrs.typeAliases)
+    .filter(s => !decoderExists(s) || !encoderExists(s));
+
+  // Don't generate a new file when there's no structs
+  // (But do overwrite an existing file)
+  if (structs.length == 0 && !outputFileExists) {
+    return [];
   }
 
   var lines = [];
@@ -25,8 +34,6 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string) {
   lines.push('import Foundation');
   lines.push('');
 
-  var structs = ast.structs(file, globalAttrs.typeAliases)
-    .filter(s => !decoderExists(s) || !encoderExists(s))
   structs.forEach(function (s) {
     lines = lines.concat(makeExtension(s, !decoderExists(s), !encoderExists(s)));
     lines.push('');

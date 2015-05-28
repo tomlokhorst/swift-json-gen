@@ -15,42 +15,36 @@ interface FileDesc {
   fullname: string;
   outfile: string;
   outbase: string;
+  outExists: boolean;
 }
 
-function fileDescriptions(input: string) : Array<FileDesc> {
-  var files : Array<FileDesc> = [];
-
-  if (fs.statSync(input).isFile()) {
-    var filename = input;
-    var dirname = path.dirname(filename)
-    var basename = path.basename(filename)
-    var outbase = basename.replace('.swift', '+JsonGen.swift');
-    var outputFilename = basename.replace('.swift', '+JsonGen.swift');
-
-    var file = {
-      filename: basename,
-      fullname: path.join(dirname, basename),
-      outbase: outbase,
-      outfile: path.join(dirname, basename.replace('.swift', '+JsonGen.swift')),
-    }
-    files = [file]
-  }
+function fullFilenames(input: string) : string[] {
 
   if (fs.statSync(input).isDirectory()) {
-    var directory = input;
-
-    files = fs.readdirSync(directory)
-      .map(function (fn) {
-        return {
-          filename: fn,
-          fullname: path.join(directory, fn),
-          outbase: fn.replace('.swift', '+JsonGen.swift'),
-          outfile: path.join(directory, fn.replace('.swift', '+JsonGen.swift')),
-        }
-      })
+    return fs.readdirSync(input).flatMap(fn => fullFilenames(path.join(input, fn)))
+  }
+  else if (fs.statSync(input).isFile()) {
+    return [input]
   }
 
-  return files;
+  throw new Error("input is neither a file nor a directory");
+}
+
+function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
+
+  var dirname = path.dirname(filename)
+  var basename = path.basename(filename)
+  var outbase = basename.replace('.swift', '+JsonGen.swift')
+  var outfile = path.join(dirname, outbase)
+  var outExists = allFilenames.indexOf(outfile) > -1
+
+  return {
+    filename: basename,
+    fullname: path.join(dirname, basename),
+    outbase: outbase,
+    outfile: outfile,
+    outExists: outExists,
+  }
 }
 
 function generate() {
@@ -62,8 +56,10 @@ function generate() {
   }
   else {
     var inputs = argv.slice(2);
-    var files = inputs
-      .flatMap(fileDescriptions)
+    var filenames = inputs.flatMap(fullFilenames)
+
+    var files = filenames
+      .map(fn => fileDescription(fn, filenames))
       .filter(function (f) {
         var isJsonGen = f.filename.indexOf('+JsonGen.swift') > 0;
         var isSwift = f.filename.indexOf('.swift') > 0;
@@ -71,9 +67,9 @@ function generate() {
         return isSwift && !isJsonGen;
       });
 
-    var filenames = files.map(f => '"' + f.fullname + '"').join(' ');
+    var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
   
-    var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenames
+    var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
     var opts = {
       maxBuffer: 200*1024*1024
     }
@@ -90,6 +86,7 @@ function generate() {
       if (xcoutputs.length != files.length) {
         console.error('inconsistency; xcoutputs not equal in length to files');
         console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
+        return
       }
 
       var fileAsts = xcoutputs.map(ast.parse);
@@ -100,16 +97,18 @@ function generate() {
         var file = files[i];
         if (file.filename == 'JsonGen.swift') continue;
 
-        printFile(fileAsts[i], globalAttrs, file.outbase, file.outfile);
+        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase, file.outExists);
+        if (lines.length == 0) continue;
+
+        var text = lines.join('\n');
+
+        printFile(text, globalAttrs, file.outbase, file.outfile);
       }
     });
   }
 }
 
-function printFile(file, globalAttrs, outbase, outfile) {
-  var lines = printer.makeFile(file, globalAttrs, outbase);
-  var text = lines.join('\n');
-
+function printFile(text, globalAttrs, outbase, outfile) {
   fs.writeFile(outfile, text, err => {
     if (err) {
       console.error(err);
