@@ -22,7 +22,7 @@ Installation
 
 Install the latest release from NPM:
 
-    > npm install swift-json-gen
+    > npm install -g swift-json-gen
     
 Also copy [`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift)
 into your own project.
