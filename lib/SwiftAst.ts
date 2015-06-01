@@ -122,7 +122,9 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
   var fullName = ast.key(0);
   var baseName = prefix + fullName.replace(/<([^>]*)>/g, '');
   var typeArgs = genericArguments(fullName)
-  var varDecls = ast.children('var_decl').map(a => varDecl(a, aliases));
+  var varDecls = ast.children('var_decl')
+    .filter(a => a.attr('storage_kind') == 'stored')
+    .map(a => varDecl(a, aliases));
 
   var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
   var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));

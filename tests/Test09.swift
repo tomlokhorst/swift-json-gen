@@ -4,6 +4,10 @@ struct Test09 {
   let stringSub1: Sub1<String>
   let sub2: Sub2<Int, Bool>
   let sub3: Sub3<Int, Int, String>
+
+  var computed: String {
+    return stringSub1.value + "!"
+  }
 }
 
 struct Sub1<T> {
