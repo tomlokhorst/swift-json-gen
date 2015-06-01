@@ -1,6 +1,6 @@
 {
   "name": "swift-json-gen",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Generate Swift Json encoders and decoders based on Swift structs.",
   "main": "lib/JsonGen",
   "bin": {
