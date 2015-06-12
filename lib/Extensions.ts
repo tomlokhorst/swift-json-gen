@@ -9,6 +9,7 @@ interface Array<T> {
   name(): string;
   fields(): Array<T>;
   contains(elem: T): boolean;
+  unique(): Array<T>;
 
   keys(): Array<string>;
   key(ix: Number): string;
@@ -42,6 +43,17 @@ Array.prototype.fields = function () {
 
 Array.prototype.contains = function (elem) {
   return this.indexOf(elem) > -1;
+}
+
+Array.prototype.unique = function() {
+  var unique = [];
+  for (var i = 0; i < this.length; i++) {
+    if (unique.indexOf(this[i]) == -1) {
+      unique.push(this[i]);
+    }
+  }
+
+  return unique;
 }
 
 Array.prototype.keys = function () {

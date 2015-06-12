@@ -23,6 +23,11 @@ interface Struct {
   varDecls: VarDecl[];
 }
 
+interface Enum {
+  baseName: string;
+  rawTypeName: string;
+}
+
 interface Extension {
   typeBaseName: string;
 }
@@ -110,7 +115,10 @@ function typeAliases(ast: any[]) : TypeAliases {
 }
 
 function structs(ast: any[], aliases: TypeAliases) : Struct[] {
-  return ast.children('struct_decl').flatMap(a => struct(a, aliases));
+  var sts = ast.children('struct_decl')
+  var structs = sts.flatMap(a => struct(a, aliases));
+
+  return structs
 }
 
 exports.structs = structs;
@@ -128,6 +136,37 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
 
   var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
   var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));
+
+  return [r].concat(rs);
+}
+
+function enums(ast: any[], aliases: TypeAliases) : Enum[] {
+  var enums = ast
+    .children('enum_decl')
+    .filter(a => {
+      var keys = a.keys()
+      var ix = keys.indexOf('inherits:')
+      return ix > 0 && keys.length > ix + 1
+    })
+
+  return enums.flatMap(a => enum_(a, aliases));
+}
+
+exports.enums = enums;
+
+function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
+
+  prefix = prefix ? prefix + '.' : '';
+
+  var fullName = ast.key(0);
+  var baseName = prefix + fullName
+
+  var keys = ast.keys()
+  var ix = keys.indexOf('inherits:')
+  var rawTypeName = keys[ix + 1]
+
+  var r = { baseName: baseName, rawTypeName: rawTypeName };
+  var rs = ast.children('enum_decl').flatMap(a => enum_(a, aliases, baseName));
 
   return [r].concat(rs);
 }

@@ -6,20 +6,23 @@ var ast = require('./SwiftAst')
 
 function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outputFileExists: boolean): string[] {
 
-  function decoderExists(struct: Struct) : boolean {
-    return globalAttrs.decoders.contains(struct.baseName);
+  function decoderExists(typeName: string) : boolean {
+    return globalAttrs.decoders.contains(typeName);
   }
 
-  function encoderExists(struct: Struct) : boolean {
-    return globalAttrs.encoders.contains(struct.baseName);
+  function encoderExists(typeName: string) : boolean {
+    return globalAttrs.encoders.contains(typeName);
   }
 
   var structs = ast.structs(file, globalAttrs.typeAliases)
-    .filter(s => !decoderExists(s) || !encoderExists(s));
+    .filter(s => !decoderExists(s.baseName) || !encoderExists(s.baseName));
 
-  // Don't generate a new file when there's no structs
+  var enums = ast.enums(file, globalAttrs.typeAliases)
+    .filter(e => !decoderExists(e.baseName) || !encoderExists(e.baseName));
+
+  // Don't generate a new file when there's no structs/enums
   // (But do overwrite an existing file)
-  if (structs.length == 0 && !outputFileExists) {
+  if (structs.length == 0 && enums.length == 0 && !outputFileExists) {
     return [];
   }
 
@@ -34,8 +37,49 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outpu
   lines.push('import Foundation');
   lines.push('');
 
+  enums.forEach(function (s) {
+
+    var createDecoder = !decoderExists(s);
+    var createEncoder = !encoderExists(s);
+
+    lines.push('extension ' + s.baseName + ' {')
+
+    if (createDecoder) {
+      lines = lines.concat(makeEnumDecoder(s));
+    }
+
+    if (createDecoder && createEncoder) {
+      lines.push('');
+    }
+
+    if (createEncoder) {
+      lines = lines.concat(makeEnumEncoder(s));
+    }
+
+    lines.push('}');
+    lines.push('');
+  });
+
   structs.forEach(function (s) {
-    lines = lines.concat(makeExtension(s, !decoderExists(s), !encoderExists(s)));
+
+    var createDecoder = !decoderExists(s);
+    var createEncoder = !encoderExists(s);
+
+    lines.push('extension ' + s.baseName + ' {')
+
+    if (createDecoder) {
+      lines = lines.concat(makeStructDecoder(s));
+    }
+
+    if (createDecoder && createEncoder) {
+      lines.push('');
+    }
+
+    if (createEncoder) {
+      lines = lines.concat(makeStructEncoder(s));
+    }
+
+    lines.push('}');
     lines.push('');
   });
 
@@ -44,50 +88,64 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outpu
 
 exports.makeFile = makeFile;
 
-function makeExtension(struct: Struct, createDecoder: boolean, createEncoder: boolean) : string {
-
+function makeEnumDecoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('extension ' + struct.baseName + ' {')
+  lines.push('  static func decodeJson(json: AnyObject) -> ' + en.baseName + '? {');
+  lines.push('    if let value = json as? ' + en.rawTypeName + ' {');
+  lines.push('      return ' + en.baseName + '(rawValue: value)');
+  lines.push('    }');
+  lines.push('    return nil');
+  lines.push('  }');
 
-  if (createDecoder) {
-    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
-    lines.push('    let _dict = json as? [String : AnyObject]');
-    lines.push('    if _dict == nil { return nil }');
-    lines.push('    let dict = _dict!');
-    lines.push('');
+  return lines.join('\n');
+}
 
-    struct.varDecls.forEach(function (d) {
-      var subs = makeFieldDecode(d, struct.typeArguments).map(indent(4));
-      lines = lines.concat(subs);
-    });
+function makeEnumEncoder(en: Enum) : string {
+  var lines = [];
 
-    lines = lines.concat(indent(4)(makeReturn(struct)));
+  lines.push('  func encodeJson() -> AnyObject {');
+  lines.push('    return rawValue');
+  lines.push('  }');
 
-    lines.push('  }');
-  }
+  return lines.join('\n');
+}
 
-  if (createDecoder && createEncoder) {
-    lines.push('');
-  }
+function makeStructDecoder(struct: Struct) : string {
+  var lines = [];
 
-  // encoder
-  if (createEncoder) {
-    lines.push('  func encodeJson' + encodeArguments(struct) + ' -> AnyObject {');
-    lines.push('    var dict: [String: AnyObject] = [:]');
-    lines.push('');
+  lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
+  lines.push('    let _dict = json as? [String : AnyObject]');
+  lines.push('    if _dict == nil { return nil }');
+  lines.push('    let dict = _dict!');
+  lines.push('');
 
-    struct.varDecls.forEach(function (d) {
-      var subs = makeFieldEncode(d, struct.typeArguments).map(indent(4));
-      lines = lines.concat(subs);
-    });
+  struct.varDecls.forEach(function (d) {
+    var subs = makeFieldDecode(d, struct.typeArguments).map(indent(4));
+    lines = lines.concat(subs);
+  });
 
-    lines.push('');
-    lines.push('    return dict');
-    lines.push('  }');
-  }
+  lines = lines.concat(indent(4)(makeReturn(struct)));
 
-  lines.push('}');
+  lines.push('  }');
+
+  return lines.join('\n');
+}
+
+function makeStructEncoder(struct: Struct) : string {
+  var lines = [];
+  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> AnyObject {');
+  lines.push('    var dict: [String: AnyObject] = [:]');
+  lines.push('');
+
+  struct.varDecls.forEach(function (d) {
+    var subs = makeFieldEncode(d, struct.typeArguments).map(indent(4));
+    lines = lines.concat(subs);
+  });
+
+  lines.push('');
+  lines.push('    return dict');
+  lines.push('  }');
 
   return lines.join('\n');
 }
