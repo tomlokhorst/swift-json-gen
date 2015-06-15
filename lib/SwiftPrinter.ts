@@ -52,9 +52,10 @@ function makeExtension(struct: Struct, createDecoder: boolean, createEncoder: bo
 
   if (createDecoder) {
     lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
-    lines.push('    let _dict = json as? [String : AnyObject]');
-    lines.push('    if _dict == nil { return nil }');
-    lines.push('    let dict = _dict!');
+    lines.push('    guard let dict = json as? [String : AnyObject] else {');
+    lines.push('      assertionFailure("json not a dictionary");');
+    lines.push('      return nil');
+    lines.push('    }');
     lines.push('');
 
     struct.varDecls.forEach(function (d) {
@@ -224,28 +225,32 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
   var optionalName = name + '_optional';
   var typeString = typeToString(type);
 
-  var lines = [
-    'let ' + fieldName + ': AnyObject? = dict["' + name + '"]',
-  ];
+  var lines = [];
 
   if (type.baseName == 'Optional') {
+    lines.push('let ' + fieldName + ': AnyObject? = dict["' + name + '"]');
     lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil ? nil : ' + decodeFunction(fieldName + '!', type, structTypeArguments))
   }
   else {
-    lines.push('if ' + fieldName + ' == nil { assertionFailure("field \'' + name + '\' is missing"); return nil }');
+    lines.push('guard let ' + fieldName + ': AnyObject? = dict["' + name + '"] else {');
+    lines.push('  assertionFailure("field \'' + name + '\' is missing")');
+    lines.push('  return nil');
+    lines.push('}');
 
     if (isKnownType(type)) {
       lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + '!');
     }
     else if (isCastType(type)) {
-      lines.push('let ' + optionalName + ': ' + typeString + '? = ' + fieldName + '! as? ' + typeString)
-      lines.push('if ' + optionalName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
-      lines.push('let ' + name + ': ' + typeString + ' = ' + optionalName + '!');
+      lines.push('guard let ' + name + ': ' + typeString + ' = ' + fieldName + '! as? ' + typeString + ' else {')
+      lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
+      lines.push('  return nil');
+      lines.push('}');
     }
     else {
-      lines.push('let ' + optionalName + ': ' + typeString + '? = ' + decodeFunction(fieldName + '!', type, structTypeArguments))
-      lines.push('if ' + optionalName + ' == nil { assertionFailure("field \'' + name + '\' is not ' + typeString + '"); return nil }');
-      lines.push('let ' + name + ': ' + typeString + ' = ' + optionalName + '!');
+      lines.push('guard let ' + name + ': ' + typeString + ' = ' + decodeFunction(fieldName + '!', type, structTypeArguments) + ' else {')
+      lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
+      lines.push('  return nil');
+      lines.push('}');
     }
   }
 
