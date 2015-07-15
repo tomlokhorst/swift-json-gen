@@ -40,6 +40,16 @@ extension Int {
   }
 }
 
+extension UInt {
+  static func decodeJson(json: AnyObject) -> UInt? {
+    return json as? UInt
+  }
+  
+  func encodeJson() -> AnyObject {
+    return self
+  }
+}
+
 extension Int64 {
   static func decodeJson(json: AnyObject) -> Int64? {
     let number = json as? NSNumber
