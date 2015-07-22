@@ -17,10 +17,10 @@ struct Sub {
   }
 }
 
-extension Test02 {
-  func encodeJson() -> AnyObject {
-    var dict: [String: AnyObject] = [:]
-    dict["one"] = one.encodeJson()
-    return dict
-  }
-}
+//extension Test02 {
+//  func encodeJson() -> AnyObject {
+//    var dict: [String: AnyObject] = [:]
+//    dict["one"] = one.encodeJson()
+//    return dict
+//  }
+//}

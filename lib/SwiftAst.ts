@@ -215,7 +215,7 @@ function mkType(name: string) : Type {
 }
 
 // Based on: https://github.com/arian/LISP.js
-function parse(text, multiple) {
+function parse(text) {
 
   var results = []
 
@@ -265,20 +265,12 @@ function parse(text, multiple) {
 
       var pop = stack.pop();
       if (!pop) {
-        if (multiple) {
-          results.push(current);
-          current = undefined;
-        }
-        else {
-          return current;
-        }
+        return current;
       }
 
       current = pop;
     }
   }
-
-  if (multiple) return results;
 
   throw 'unbalanced parentheses';
 };
