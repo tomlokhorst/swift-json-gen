@@ -39,8 +39,8 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outpu
 
   enums.forEach(function (s) {
 
-    var createDecoder = !decoderExists(s);
-    var createEncoder = !encoderExists(s);
+    var createDecoder = !decoderExists(s.baseName);
+    var createEncoder = !encoderExists(s.baseName);
 
     lines.push('extension ' + s.baseName + ' {')
 
@@ -62,8 +62,8 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outpu
 
   structs.forEach(function (s) {
 
-    var createDecoder = !decoderExists(s);
-    var createEncoder = !encoderExists(s);
+    var createDecoder = !decoderExists(s.baseName);
+    var createEncoder = !encoderExists(s.baseName);
 
     lines.push('extension ' + s.baseName + ' {')
 
