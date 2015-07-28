@@ -114,59 +114,64 @@ function typeAliases(ast: any[]) : TypeAliases {
   return aliases;
 }
 
-function structs(ast: any[], aliases: TypeAliases) : Struct[] {
-  var sts = ast.children('struct_decl')
-  var structs = sts.flatMap(a => struct(a, aliases));
+function getBaseName(ast: any[], prefix?: string) : string {
+    prefix = prefix ? prefix + '.' : '';
 
-  return structs
+  var fullName = ast.key(0);
+  return prefix + fullName.replace(/<([^>]*)>/g, '');
+}
+
+function structs(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
+  var structs1 = ast.children('struct_decl').flatMap(a => struct(a, aliases, prefix));
+  var structs2 = ast.children('enum_decl').flatMap(a => structs(a, aliases, getBaseName(a, prefix)));
+
+  return structs1.concat(structs2)
 }
 
 exports.structs = structs;
 
 function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
 
-  prefix = prefix ? prefix + '.' : '';
-
+  var baseName = getBaseName(ast, prefix);
   var fullName = ast.key(0);
-  var baseName = prefix + fullName.replace(/<([^>]*)>/g, '');
   var typeArgs = genericArguments(fullName)
   var varDecls = ast.children('var_decl')
     .filter(a => a.attr('storage_kind') == 'stored')
     .map(a => varDecl(a, aliases));
 
   var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
-  var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));
+  var rs = structs(ast, aliases, baseName);
 
   return [r].concat(rs);
 }
 
-function enums(ast: any[], aliases: TypeAliases) : Enum[] {
-  var enums = ast
+function enums(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
+  var enums1 = ast
     .children('enum_decl')
     .filter(a => {
       var keys = a.keys()
       var ix = keys.indexOf('inherits:')
       return ix > 0 && keys.length > ix + 1
     })
+    .flatMap(a => enum_(a, aliases, prefix));
+  var enums2 = ast.children('struct_decl').flatMap(a => enums(a, aliases, getBaseName(a, prefix)));
 
-  return enums.flatMap(a => enum_(a, aliases));
+  return enums1.concat(enums2);
 }
 
 exports.enums = enums;
 
 function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
 
-  prefix = prefix ? prefix + '.' : '';
-
+  var baseName = getBaseName(ast, prefix);
   var fullName = ast.key(0);
-  var baseName = prefix + fullName
 
   var keys = ast.keys()
   var ix = keys.indexOf('inherits:')
   var rawTypeName = keys[ix + 1]
 
   var r = { baseName: baseName, rawTypeName: rawTypeName };
-  var rs = ast.children('enum_decl').flatMap(a => enum_(a, aliases, baseName));
+  var rs = enums(ast, aliases, baseName);
 
   return [r].concat(rs);
 }
