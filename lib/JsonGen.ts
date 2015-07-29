@@ -10,12 +10,13 @@ require('./Extensions')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
+var headerLength = 7
+
 interface FileDesc {
   filename: string;
   fullname: string;
   outfile: string;
   outbase: string;
-  outExists: boolean;
 }
 
 function fullFilenames(input: string) : string[] {
@@ -36,14 +37,12 @@ function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
   var basename = path.basename(filename)
   var outbase = basename.replace('.swift', '+JsonGen.swift')
   var outfile = path.join(dirname, outbase)
-  var outExists = allFilenames.indexOf(outfile) > -1
 
   return {
     filename: basename,
     fullname: path.join(dirname, basename),
     outbase: outbase,
     outfile: outfile,
-    outExists: outExists,
   }
 }
 
@@ -109,7 +108,7 @@ function generate() {
         var file = files[i];
         if (file.filename == 'JsonGen.swift') continue;
 
-        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase, file.outExists);
+        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase);
         if (lines.length == 0) continue;
 
         var text = lines.join('\n');
@@ -154,10 +153,27 @@ function parseXcOutput(output: String) : { errors: String[], outputs: String[] }
 }
 
 function printFile(text, globalAttrs, outbase, outfile) {
-  fs.writeFile(outfile, text, err => {
-    if (err) {
-      console.error(err);
+
+  fs.readFile(outfile, 'utf8', (err, existing) => {
+
+    // Ignore first 4 lines (containing only generated date)
+    var outputBody = text.split('\n').slice(headerLength).join('\n');
+
+    // No exising file and no output body
+    if (err && outputBody == '') return;
+
+    if (existing) {
+      var existingBody = existing.split('\n').slice(headerLength).join('\n')
+
+      // No changes since existing
+      if (outputBody == existingBody) return;
     }
+
+    fs.writeFile(outfile, text, 'utf8', err => {
+      if (err) {
+        console.error(err);
+      }
+    });
   });
 }
 

@@ -4,7 +4,7 @@
 
 var ast = require('./SwiftAst')
 
-function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outputFileExists: boolean): string[] {
+function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): string[] {
 
   function decoderExists(typeName: string) : boolean {
     return globalAttrs.decoders.contains(typeName);
@@ -19,12 +19,6 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string, outpu
 
   var enums = ast.enums(file, globalAttrs.typeAliases)
     .filter(e => !decoderExists(e.baseName) || !encoderExists(e.baseName));
-
-  // Don't generate a new file when there's no structs/enums
-  // (But do overwrite an existing file)
-  if (structs.length == 0 && enums.length == 0 && !outputFileExists) {
-    return [];
-  }
 
   var lines = [];
 
