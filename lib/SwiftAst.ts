@@ -1,4 +1,4 @@
-// 
+//
 // A parse function for parsing the AST dump from the swift compiler.
 //
 
@@ -100,8 +100,12 @@ function typeAliases(ast: any[]) : TypeAliases {
 
   ast.children('typealias')
     .forEach(function (t) {
-      var name = t.fields().name().unquote();
+      var name = t.fields().name().unquote()
       var type = t.attrs().filter(attr => attr[0] == 'type' )[1][1]
+
+      if (!type.startsWith("'") && type.endsWith("'")) {
+        type = type.substring(0, type.length - 1)
+      }
 
       aliases[name] = type;
     });
@@ -220,6 +224,7 @@ function parse(text, multiple) {
   var results = []
 
   text = text.trim();
+  text = text.replace(/=\[([^\]]*)\]'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
   text = text.replace(/='([^']*)'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
   text = text.replace(/"<([^>]*)>/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
 

@@ -1,4 +1,4 @@
-// 
+//
 // A parse function for parsing the AST dump from the swift compiler.
 //
 // Also extents the Array prototype with a bunch of useful functions for
@@ -74,11 +74,11 @@ Array.prototype.attrs = function () {
     .map(function (s) {
       var ix = s.indexOf('=');
       var key = s.slice(0, ix);
-      var val = s.slice(ix + 1).replace(/'/g, '"');
+      var val = s.slice(ix + 1);
 
-      if (val.length && val[0] == '"') {
+      if (val.length > 2 && val.startsWith("'") && val.endsWith("'")) {
         try {
-          val = JSON.parse(val);
+          val = JSON.parse('"' + val.substring(1, val.length - 1) + '"');
         }
         catch (_) {
         }
