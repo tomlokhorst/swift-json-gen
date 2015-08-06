@@ -10,12 +10,13 @@ require('./Extensions')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
+var headerLength = 7
+
 interface FileDesc {
   filename: string;
   fullname: string;
   outfile: string;
   outbase: string;
-  outExists: boolean;
 }
 
 function fullFilenames(input: string) : string[] {
@@ -36,14 +37,12 @@ function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
   var basename = path.basename(filename)
   var outbase = basename.replace('.swift', '+JsonGen.swift')
   var outfile = path.join(dirname, outbase)
-  var outExists = allFilenames.indexOf(outfile) > -1
 
   return {
     filename: basename,
     fullname: path.join(dirname, basename),
     outbase: outbase,
     outfile: outfile,
-    outExists: outExists,
   }
 }
 
@@ -54,9 +53,13 @@ function generate() {
     console.log('USAGE: swift-json-gen some/directory/FileWithStructs.swift');
     console.log('');
   }
+  if (argv[2] == '--version') {
+    var pjson =  require('../package.json');
+    console.log(pjson.version);
+  }
   else {
     var inputs = argv.slice(2);
-    var filenames = inputs.flatMap(fullFilenames)
+    var filenames = inputs.flatMap(fullFilenames);
 
     var files = filenames
       .map(fn => fileDescription(fn, filenames))
@@ -77,16 +80,24 @@ function generate() {
 
     exec(cmd, opts, function (error, stdout, stderr) {
 
-      // If an actual error, print and stop
-      if (stderr.indexOf('(') != 0) {
-        console.error(stderr);
+      var parseResult = parseXcOutput(stderr)
+      var xcoutputs = parseResult.outputs
+      var errors = parseResult.errors
+
+      // If an actual error (not a `(source_file`), print and stop
+      if (errors.length) {
+        errors.forEach(error => {
+          console.error(error)
+        })
         return;
       }
 
-      var xcoutputs = stderr.split(/\n\(source_file/g)
       if (xcoutputs.length != files.length) {
+        console.error('INTERNAL ERROR - swift-json-gen');
         console.error('inconsistency; xcoutputs not equal in length to files');
         console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
+        console.error();
+        console.error('Please report this at: https://github.com/tomlokhorst/swift-json-gen/issues');
         return
       }
 
@@ -98,7 +109,7 @@ function generate() {
         var file = files[i];
         if (file.filename == 'JsonGen.swift') continue;
 
-        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase, file.outExists);
+        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase);
         if (lines.length == 0) continue;
 
         var text = lines.join('\n');
@@ -109,11 +120,61 @@ function generate() {
   }
 }
 
-function printFile(text, globalAttrs, outbase, outfile) {
-  fs.writeFile(outfile, text, err => {
-    if (err) {
-      console.error(err);
+function parseXcOutput(output: String) : { errors: String[], outputs: String[] } {
+  // Separate outputs
+  // Each non-error output starts with `(`, subsequent lines start with ` ` or `)`
+  var lines = output.split(/\n/g);
+
+  var xcoutputs = [];
+  var errors = [];
+  var current = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.length == 0 || line[0] == ' ' || line[0] == ')') {
+      current.push(line);
     }
+    else {
+      var merged = current.join('\n');
+      if (current.length && merged.indexOf('(source_file') == 0)
+        xcoutputs.push(merged);
+      else if (current.length)
+        errors.push(merged);
+
+      current = [line];
+    }
+  }
+
+  var merged = current.join('\n');
+  if (current.length && merged.indexOf('(source_file') == 0)
+    xcoutputs.push(merged);
+  else if (current.length)
+    errors.push(merged);
+
+  return { errors: errors, outputs: xcoutputs }
+}
+
+function printFile(text, globalAttrs, outbase, outfile) {
+
+  fs.readFile(outfile, 'utf8', (err, existing) => {
+
+    // Ignore first 4 lines (containing only generated date)
+    var outputBody = text.split('\n').slice(headerLength).join('\n');
+
+    // No exising file and no output body
+    if (err && outputBody == '') return;
+
+    if (existing) {
+      var existingBody = existing.split('\n').slice(headerLength).join('\n')
+
+      // No changes since existing
+      if (outputBody == existingBody) return;
+    }
+
+    fs.writeFile(outfile, text, 'utf8', err => {
+      if (err) {
+        console.error(err);
+      }
+    });
   });
 }
 

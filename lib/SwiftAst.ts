@@ -23,6 +23,11 @@ interface Struct {
   varDecls: VarDecl[];
 }
 
+interface Enum {
+  baseName: string;
+  rawTypeName: string;
+}
+
 interface Extension {
   typeBaseName: string;
 }
@@ -113,25 +118,64 @@ function typeAliases(ast: any[]) : TypeAliases {
   return aliases;
 }
 
-function structs(ast: any[], aliases: TypeAliases) : Struct[] {
-  return ast.children('struct_decl').flatMap(a => struct(a, aliases));
+function getBaseName(ast: any[], prefix?: string) : string {
+    prefix = prefix ? prefix + '.' : '';
+
+  var fullName = ast.key(0);
+  return prefix + fullName.replace(/<([^>]*)>/g, '');
+}
+
+function structs(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
+  var structs1 = ast.children('struct_decl').flatMap(a => struct(a, aliases, prefix));
+  var structs2 = ast.children('enum_decl').flatMap(a => structs(a, aliases, getBaseName(a, prefix)));
+
+  return structs1.concat(structs2)
 }
 
 exports.structs = structs;
 
 function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
 
-  prefix = prefix ? prefix + '.' : '';
-
+  var baseName = getBaseName(ast, prefix);
   var fullName = ast.key(0);
-  var baseName = prefix + fullName.replace(/<([^>]*)>/g, '');
   var typeArgs = genericArguments(fullName)
   var varDecls = ast.children('var_decl')
     .filter(a => a.attr('storage_kind') == 'stored')
     .map(a => varDecl(a, aliases));
 
   var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
-  var rs = ast.children('struct_decl').flatMap(a => struct(a, aliases, baseName));
+  var rs = structs(ast, aliases, baseName);
+
+  return [r].concat(rs);
+}
+
+function enums(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
+  var enums1 = ast
+    .children('enum_decl')
+    .filter(a => {
+      var keys = a.keys()
+      var ix = keys.indexOf('inherits:')
+      return ix > 0 && keys.length > ix + 1
+    })
+    .flatMap(a => enum_(a, aliases, prefix));
+  var enums2 = ast.children('struct_decl').flatMap(a => enums(a, aliases, getBaseName(a, prefix)));
+
+  return enums1.concat(enums2);
+}
+
+exports.enums = enums;
+
+function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
+
+  var baseName = getBaseName(ast, prefix);
+  var fullName = ast.key(0);
+
+  var keys = ast.keys()
+  var ix = keys.indexOf('inherits:')
+  var rawTypeName = keys[ix + 1]
+
+  var r = { baseName: baseName, rawTypeName: rawTypeName };
+  var rs = enums(ast, aliases, baseName);
 
   return [r].concat(rs);
 }
@@ -219,7 +263,7 @@ function mkType(name: string) : Type {
 }
 
 // Based on: https://github.com/arian/LISP.js
-function parse(text, multiple) {
+function parse(text) {
 
   var results = []
 
@@ -270,20 +314,12 @@ function parse(text, multiple) {
 
       var pop = stack.pop();
       if (!pop) {
-        if (multiple) {
-          results.push(current);
-          current = undefined;
-        }
-        else {
-          return current;
-        }
+        return current;
       }
 
       current = pop;
     }
   }
-
-  if (multiple) return results;
 
   throw 'unbalanced parentheses';
 };
