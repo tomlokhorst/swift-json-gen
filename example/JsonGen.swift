@@ -142,9 +142,9 @@ extension Optional {
 }
 
 extension Array {
-  static func decodeJson(decodeT: AnyObject -> T?, _ json: AnyObject) -> [T]? {
+  static func decodeJson(decodeElement: AnyObject -> Element?, _ json: AnyObject) -> [Element]? {
     if let arr = json as? [AnyObject] {
-      let decoded = arr.map(decodeT)
+      let decoded = arr.map(decodeElement)
 
       if decoded.filter({ $0 == nil }).first != nil {
         return nil
@@ -156,8 +156,8 @@ extension Array {
     return nil
   }
 
-  func encodeJson(encodeJsonT: T -> AnyObject) -> AnyObject {
-    return self.map(encodeJsonT)
+  func encodeJson(encodeJsonElement: Element -> AnyObject) -> AnyObject {
+    return self.map(encodeJsonElement)
   }
 }
 
@@ -181,6 +181,10 @@ extension Dictionary {
 
   func encodeJson(encodeJsonKey: Key -> AnyObject, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
     var dict = [String: AnyObject]()
+
+    for (key, value) in self {
+      dict[encodeJsonKey(key) as! String] = encodeJsonValue(value)
+    }
 
     return dict
   }
