@@ -15,7 +15,7 @@ extension String {
     return json as? String
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> String {
     return self
   }
 }
@@ -179,8 +179,13 @@ extension Dictionary {
     return result
   }
 
-  func encodeJson(encodeJsonKey: Key -> AnyObject, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
+  func encodeJson(encodeJsonKey: Key -> String, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
     var dict = [String: AnyObject]()
+
+    for (key, val) in self {
+      let keyString = encodeJsonKey(key)
+      dict[keyString] = encodeJsonValue(val)
+    }
 
     return dict
   }
