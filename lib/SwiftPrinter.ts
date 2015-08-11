@@ -98,7 +98,7 @@ function makeEnumDecoder(en: Enum) : string {
 function makeEnumEncoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  func encodeJson() -> AnyObject {');
+  lines.push('  func encodeJson() -> ' + en.rawTypeName + ' {');
   lines.push('    return rawValue');
   lines.push('  }');
 
