@@ -176,7 +176,7 @@ extension Dictionary {
       }
     }
 
-    return nil
+    return result
   }
 
   func encodeJson(encodeJsonKey: Key -> AnyObject, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
