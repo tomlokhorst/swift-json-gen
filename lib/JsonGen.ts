@@ -10,7 +10,7 @@ require('./Extensions')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
-var headerLength = 7
+var headerLength = 8
 
 interface FileDesc {
   filename: string;
@@ -51,6 +51,8 @@ function generate() {
 
   if (argv.length < 3) {
     console.log('USAGE: swift-json-gen some/directory/FileWithStructs.swift');
+    console.log('  Generates +JsonGen.swift files for all swift files supplied,');
+    console.log('  filenames ending with +Extensions.swift are excluded.');
     console.log('');
   }
   if (argv[2] == '--version') {
@@ -64,14 +66,15 @@ function generate() {
     var files = filenames
       .map(fn => fileDescription(fn, filenames))
       .filter(function (f) {
+        var isExtensions = f.filename.indexOf('+Extensions.swift') > 0;
         var isJsonGen = f.filename.indexOf('+JsonGen.swift') > 0;
         var isSwift = f.filename.indexOf('.swift') > 0;
 
-        return isSwift && !isJsonGen;
+        return isSwift && !isJsonGen && !isExtensions;
       });
 
     var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
-  
+
     var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
     var opts = {
       maxBuffer: 200*1024*1024
