@@ -70,7 +70,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     }
 
     if (createEncoder) {
-      lines = lines.concat(makeStructEncoder(s));
+      lines = lines.concat(makeStructEncoder(s, enums));
     }
 
     lines.push('}');
@@ -126,14 +126,14 @@ function makeStructDecoder(struct: Struct) : string {
   return lines.join('\n');
 }
 
-function makeStructEncoder(struct: Struct) : string {
+function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
   var lines = [];
   lines.push('  func encodeJson' + encodeArguments(struct) + ' -> AnyObject {');
   lines.push('    var dict: [String: AnyObject] = [:]');
   lines.push('');
 
   struct.varDecls.forEach(function (d) {
-    var subs = makeFieldEncode(d, struct.typeArguments).map(indent(4));
+    var subs = makeFieldEncode(d, struct.typeArguments, enums).map(indent(4));
     lines = lines.concat(subs);
   });
 
@@ -199,24 +199,24 @@ function encodeFunction(name: string, type: Type, genericEncoders: string[]) : s
   return name + '.encodeJson(' + args + ')';
 }
 
-function makeFieldEncode(field: VarDecl, structTypeArguments: string[]) {
+function makeFieldEncode(field: VarDecl, structTypeArguments: string[], enums: Enum[]) {
+  var lines = [];
+
   var name = field.name;
   var type = field.type;
 
-  return [ 'dict["' + name + '"] = ' + encodeFunction(name, type, structTypeArguments) ];
+  var prefix = ''
 
-  if (isKnownType(type))
-    return [ 'dict["' + name + '"] = ' + name ];
+    if (type.baseName == 'Dictionary' && type.genericArguments.length == 2) {
+      var keyType = type.genericArguments[0].baseName;
+      var enum_ = enums.filter(e => e.baseName == keyType)[0];
+      if (keyType != 'String' && enum_.rawTypeName != 'String') {
+        lines.push('/* WARNING: Json only supports Strings as keys in dictionaries */');
+      }
+    }
+  lines.push('dict["' + name + '"] = ' + encodeFunction(name, type, structTypeArguments));
 
-  if (structTypeArguments.contains(type.baseName))
-    return [ 'dict["' + name + '"] = encode' + type.baseName + '(' + name + ')' ];
-
-  var args = type.genericArguments
-    .map(t => '{ $0.encodeJson() }')
-    .map(s => '(' + s + ')')
-    .join('');
-
-  return [ 'dict["' + name + '"] = ' + name + '.encodeJson' + args + '()' ];
+  return lines;
 }
 
 function decodeFunction(arg: string, type: Type, genericDecoders: string[]) : string {

@@ -3,9 +3,12 @@ struct Test08 {
   let two: [String: Int]
   //  let three: [Bool: Float] // Can't encode non-string based keys in Json
   let four: [Enum08: Int]
+  let five: JsonObject
 }
 
-enum Enum08: String {
+typealias Test08String = String
+
+enum Enum08: Test08String {
   case One = "One"
   case Two = "Two"
 }
