@@ -12,9 +12,9 @@ struct Sub {
   let one: NSURL
   let two: NSDate
 
-  static func decode(json: AnyObject) -> Sub? {
-    return Sub(one: NSURL(), two: NSDate())
-  }
+//  static func decode(json: AnyObject) -> Sub? {
+//    return Sub(one: NSURL(), two: NSDate())
+//  }
 }
 
 //extension Test02 {
