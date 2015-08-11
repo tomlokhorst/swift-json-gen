@@ -165,9 +165,9 @@ extension Dictionary {
   static func decodeJson(decodeKey: AnyObject -> Key?, _ decodeValue: AnyObject -> Value?, _ json: AnyObject) -> [Key: Value]? {
     var result = [Key: Value]()
 
-    if let dict = json as? [Key: AnyObject] {
+    if let dict = json as? [String: AnyObject] {
       for (key, val) in dict {
-        if let value = decodeValue(val) {
+        if let key = decodeKey(key), value = decodeValue(val) {
           result[key] = value
         }
         else {
@@ -178,7 +178,7 @@ extension Dictionary {
 
     return result
   }
-
+  
   func encodeJson(encodeJsonKey: Key -> AnyObject, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
     var dict = [String: AnyObject]()
 
