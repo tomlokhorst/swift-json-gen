@@ -129,7 +129,7 @@ function makeStructDecoder(struct: Struct) : string {
 
 function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
   var lines = [];
-  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> AnyObject {');
+  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> [String: AnyObject] {');
   lines.push('    var dict: [String: AnyObject] = [:]');
   lines.push('');
 
