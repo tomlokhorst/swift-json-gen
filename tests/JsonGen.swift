@@ -132,12 +132,12 @@ extension NSDate
 }
 
 extension Optional {
-  static func decodeJson(decodeT: AnyObject -> T?, _ json: AnyObject) -> T? {
-    return decodeT(json)
+  static func decodeJson(decodeWrapped: AnyObject -> Wrapped?, _ json: AnyObject) -> Wrapped? {
+    return decodeWrapped(json)
   }
 
-  func encodeJson(encodeJsonT: T -> AnyObject) -> AnyObject {
-    return self.map(encodeJsonT) ?? NSNull()
+  func encodeJson(encodeJsonWrapped: Wrapped -> AnyObject) -> AnyObject {
+    return self.map(encodeJsonWrapped) ?? NSNull()
   }
 }
 
