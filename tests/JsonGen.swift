@@ -15,7 +15,7 @@ extension String {
     return json as? String
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> String {
     return self
   }
 }
@@ -25,7 +25,7 @@ extension Bool {
     return json as? Bool
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> Bool {
     return self
   }
 }
@@ -35,7 +35,7 @@ extension Int {
     return json as? Int
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> Int {
     return self
   }
 }
@@ -45,7 +45,7 @@ extension UInt {
     return json as? UInt
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> UInt {
     return self
   }
 }
@@ -56,7 +56,7 @@ extension Int64 {
     return number.map { $0.longLongValue }
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> NSNumber {
     return NSNumber(longLong: self)
   }
 }
@@ -67,7 +67,7 @@ extension Float {
     return number.map { $0.floatValue }
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> Float {
     return self
   }
 }
@@ -78,7 +78,7 @@ extension Double {
     return number.map { $0.doubleValue }
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> Double {
     return self
   }
 }
@@ -88,7 +88,7 @@ extension NSDictionary {
     return json as? NSDictionary
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> NSDictionary {
     return self
   }
 }
@@ -102,7 +102,7 @@ extension NSURL {
     return nil
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> NSObject {
     return self.absoluteString ?? NSNull()
   }
 }
@@ -126,7 +126,7 @@ extension NSDate
     return nil
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> String {
     return JsonGenDateFormatter.withTimeZone.stringFromDate(self)
   }
 }
@@ -156,14 +156,14 @@ extension Array {
     return nil
   }
 
-  func encodeJson(encodeJsonElement: Element -> AnyObject) -> AnyObject {
+  func encodeJson(encodeJsonElement: Element -> AnyObject) -> [AnyObject] {
     return self.map(encodeJsonElement)
   }
 }
 
 extension Dictionary {
   static func decodeJson(decodeKey: AnyObject -> Key?, _ decodeValue: AnyObject -> Value?, _ json: AnyObject) -> [Key: Value]? {
-    var result = [Key: Value]()
+    var result: [Key: Value] = [:]
 
     if let dict = json as? [Key: AnyObject] {
       for (key, val) in dict {
@@ -176,14 +176,19 @@ extension Dictionary {
       }
     }
 
-    return nil
+    return result
   }
 
-  func encodeJson(encodeJsonKey: Key -> AnyObject, _ encodeJsonValue: Value -> AnyObject) -> AnyObject {
-    var dict = [String: AnyObject]()
+  func encodeJson(encodeJsonKey: Key -> String, _ encodeJsonValue: Value -> AnyObject) -> [String: AnyObject] {
+    var dict: [String: AnyObject] = [:]
+
+    for (key, val) in self {
+      let keyString = encodeJsonKey(key)
+      dict[keyString] = encodeJsonValue(val)
+    }
 
     for (key, value) in self {
-      dict[encodeJsonKey(key) as! String] = encodeJsonValue(value)
+      dict[encodeJsonKey(key)] = encodeJsonValue(value)
     }
 
     return dict

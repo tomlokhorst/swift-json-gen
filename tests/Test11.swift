@@ -35,8 +35,8 @@ struct Test11a {
 
 
 extension Test11a.Test11b.Test11c.Test11d {
-
-  func encodeJson() -> AnyObject {
-    return rawValue
-  }
+//
+//  func encodeJson() -> AnyObject {
+//    return rawValue
+//  }
 }

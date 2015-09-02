@@ -321,7 +321,13 @@ function parse(text) {
     }
   }
 
-  throw 'unbalanced parentheses';
+  var msg = 'INTERNAL ERROR:\n'
+    + 'Likely due to errornous output from Swift compiler on some language construct (like a switch or array initializer).\n'
+    + 'Workaround: Change all methods from SomeFile.swift into extensions methods in SomeFile+Extensions.swift, which is ignored by JsonGen.\n\n'
+    + 'For details, please create an issue (including the failing Swift sources):\nhttps://github.com/tomlokhorst/swift-json-gen/issues';
+  console.error(msg)
+
+  throw 'unbalanced parentheses'
 };
 
 exports.parse = parse;
