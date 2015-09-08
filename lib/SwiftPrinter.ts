@@ -111,7 +111,7 @@ function makeStructDecoder(struct: Struct) : string {
 
   lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
   lines.push('    guard let dict = json as? [String : AnyObject] else {');
-  lines.push('      assertionFailure("json not a dictionary");');
+  lines.push('      assertionFailure("json not a dictionary")');
   lines.push('      return nil');
   lines.push('    }');
   lines.push('');
@@ -282,7 +282,7 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
 
   if (type.baseName == 'Optional') {
     lines.push('let ' + fieldName + ': AnyObject? = dict["' + name + '"]');
-    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil ? nil : ' + decodeFunction(fieldName + '!', type, structTypeArguments))
+    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil || ' + fieldName + '! is NSNull ? nil : ' + decodeFunction(fieldName + '!', type, structTypeArguments))
   }
   else {
     lines.push('guard let ' + fieldName + ': AnyObject? = dict["' + name + '"] else {');
