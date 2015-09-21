@@ -30,38 +30,6 @@ This file contains some encoders and decoders for default Swift and Foundation
 types.
 
 
-How it works
-------------
-
-This program calls the Swift compiler and dumps the parsed AST.  
-(Using the command `xcrun swiftc -dump-ast SomeFile.swift`)
-
-This AST is traversed to look for struct definitions, for each struct
-`decodeJson` and `encodeJson` functions is generated:
-
-```swift
-extention SomeStruct {
-  static func decodeJson(json: AnyObject) -> SomeStruct? {
-    ...
-  }
-  
-  func encodeJson() -> AnyObject {
-    ...
-  }
-}
-```
-
-Customization
--------------
-
-If you want to differ from the default generated code you can provide your own
-`decodeJson` or `encodeJson` functions. If these already exist, no new
-function will be generated.
-
-You also need to provide your own functions for kinds that are not supported,
-like enums and classes.
-
-
 Example
 -------
 
@@ -87,41 +55,54 @@ content:
 ```swift
 extension Blog {
   static func decodeJson(json: AnyObject) -> Blog? {
-    let _dict = json as? [String : AnyObject]
-    if _dict == nil { return nil }
-    let dict = _dict!
+    guard let dict = json as? [String : AnyObject] else {
+      assertionFailure("json not a dictionary")
+      return nil
+    }
 
-    let id_field: AnyObject? = dict["id"]
-    if id_field == nil { assertionFailure("field 'id' is missing"); return nil }
-    let id_optional: Int? = Int.decodeJson(id_field!)
-    if id_optional == nil { assertionFailure("field 'id' is not Int"); return nil }
-    let id: Int = id_optional!
+    guard let id_field: AnyObject? = dict["id"] else {
+      assertionFailure("field 'id' is missing")
+      return nil
+    }
+    guard let id: Int = Int.decodeJson(id_field!) else {
+      assertionFailure("field 'id' is not a Int")
+      return nil
+    }
 
-    let name_field: AnyObject? = dict["name"]
-    if name_field == nil { assertionFailure("field 'name' is missing"); return nil }
-    let name_optional: String? = String.decodeJson(name_field!)
-    if name_optional == nil { assertionFailure("field 'name' is not String"); return nil }
-    let name: String = name_optional!
+    guard let name_field: AnyObject? = dict["name"] else {
+      assertionFailure("field 'name' is missing")
+      return nil
+    }
+    guard let name: String = String.decodeJson(name_field!) else {
+      assertionFailure("field 'name' is not a String")
+      return nil
+    }
 
     let author_field: AnyObject? = dict["author"]
-    let author: String? = author_field == nil ? nil : Optional.decodeJson({ String.decodeJson($0) }, author_field!)
+    let author: String? = author_field == nil || author_field! is NSNull ? nil : Optional.decodeJson({ String.decodeJson($0) }, author_field!)
 
-    let needsPassword_field: AnyObject? = dict["needsPassword"]
-    if needsPassword_field == nil { assertionFailure("field 'needsPassword' is missing"); return nil }
-    let needsPassword_optional: Bool? = Bool.decodeJson(needsPassword_field!)
-    if needsPassword_optional == nil { assertionFailure("field 'needsPassword' is not Bool"); return nil }
-    let needsPassword: Bool = needsPassword_optional!
+    guard let needsPassword_field: AnyObject? = dict["needsPassword"] else {
+      assertionFailure("field 'needsPassword' is missing")
+      return nil
+    }
+    guard let needsPassword: Bool = Bool.decodeJson(needsPassword_field!) else {
+      assertionFailure("field 'needsPassword' is not a Bool")
+      return nil
+    }
 
-    let url_field: AnyObject? = dict["url"]
-    if url_field == nil { assertionFailure("field 'url' is missing"); return nil }
-    let url_optional: NSURL? = NSURL.decodeJson(url_field!)
-    if url_optional == nil { assertionFailure("field 'url' is not NSURL"); return nil }
-    let url: NSURL = url_optional!
+    guard let url_field: AnyObject? = dict["url"] else {
+      assertionFailure("field 'url' is missing")
+      return nil
+    }
+    guard let url: NSURL = NSURL.decodeJson(url_field!) else {
+      assertionFailure("field 'url' is not a NSURL")
+      return nil
+    }
 
     return Blog(id: id, name: name, author: author, needsPassword: needsPassword, url: url)
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> [String: AnyObject] {
     var dict: [String: AnyObject] = [:]
 
     dict["id"] = id.encodeJson()
@@ -135,10 +116,42 @@ extension Blog {
 }
 ```
 
+Customization
+-------------
+
+If you want to differ from the default generated code you can provide your own
+`decodeJson` or `encodeJson` functions. If these already exist, no new
+function will be generated.
+
+You also need to provide your own functions for kinds that are not supported,
+like enums and classes.
+
+
+How it works
+------------
+
+This program calls the Swift compiler and dumps the parsed AST.  
+(Using the command `xcrun swiftc -dump-ast SomeFile.swift`)
+
+This AST is traversed to look for struct definitions, for each struct
+`decodeJson` and `encodeJson` functions is generated:
+
+```swift
+extention SomeStruct {
+  static func decodeJson(json: AnyObject) -> SomeStruct? {
+    ...
+  }
+  
+  func encodeJson() -> AnyObject {
+    ...
+  }
+}
+```
+
 Compiling
 ---------
 
-This package is written in TypeScript. To make changes to the code of `swift-json-gen`, first install TypeScript:
+This package is written in TypeScript. To make changes to the code of JsonGen, first install TypeScript:
 
     > npm install -g typescript
 
