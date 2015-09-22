@@ -285,22 +285,22 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
     lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil || ' + fieldName + '! is NSNull ? nil : ' + decodeFunction(fieldName + '!', type, structTypeArguments))
   }
   else {
-    lines.push('guard let ' + fieldName + ': AnyObject? = dict["' + name + '"] else {');
+    lines.push('guard let ' + fieldName + ': AnyObject = dict["' + name + '"] else {');
     lines.push('  assertionFailure("field \'' + name + '\' is missing")');
     lines.push('  return nil');
     lines.push('}');
 
     if (isKnownType(type)) {
-      lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + '!');
+      lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName);
     }
     else if (isCastType(type)) {
-      lines.push('guard let ' + name + ': ' + typeString + ' = ' + fieldName + '! as? ' + typeString + ' else {')
+      lines.push('guard let ' + name + ': ' + typeString + ' = ' + fieldName + ' as? ' + typeString + ' else {')
       lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
       lines.push('  return nil');
       lines.push('}');
     }
     else {
-      lines.push('guard let ' + name + ': ' + typeString + ' = ' + decodeFunction(fieldName + '!', type, structTypeArguments) + ' else {')
+      lines.push('guard let ' + name + ': ' + typeString + ' = ' + decodeFunction(fieldName, type, structTypeArguments) + ' else {')
       lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
       lines.push('  return nil');
       lines.push('}');

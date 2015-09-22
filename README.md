@@ -60,20 +60,20 @@ extension Blog {
       return nil
     }
 
-    guard let id_field: AnyObject? = dict["id"] else {
+    guard let id_field: AnyObject = dict["id"] else {
       assertionFailure("field 'id' is missing")
       return nil
     }
-    guard let id: Int = Int.decodeJson(id_field!) else {
+    guard let id: Int = Int.decodeJson(id_field) else {
       assertionFailure("field 'id' is not a Int")
       return nil
     }
 
-    guard let name_field: AnyObject? = dict["name"] else {
+    guard let name_field: AnyObject = dict["name"] else {
       assertionFailure("field 'name' is missing")
       return nil
     }
-    guard let name: String = String.decodeJson(name_field!) else {
+    guard let name: String = String.decodeJson(name_field) else {
       assertionFailure("field 'name' is not a String")
       return nil
     }
@@ -81,20 +81,20 @@ extension Blog {
     let author_field: AnyObject? = dict["author"]
     let author: String? = author_field == nil || author_field! is NSNull ? nil : Optional.decodeJson({ String.decodeJson($0) }, author_field!)
 
-    guard let needsPassword_field: AnyObject? = dict["needsPassword"] else {
+    guard let needsPassword_field: AnyObject = dict["needsPassword"] else {
       assertionFailure("field 'needsPassword' is missing")
       return nil
     }
-    guard let needsPassword: Bool = Bool.decodeJson(needsPassword_field!) else {
+    guard let needsPassword: Bool = Bool.decodeJson(needsPassword_field) else {
       assertionFailure("field 'needsPassword' is not a Bool")
       return nil
     }
 
-    guard let url_field: AnyObject? = dict["url"] else {
+    guard let url_field: AnyObject = dict["url"] else {
       assertionFailure("field 'url' is missing")
       return nil
     }
-    guard let url: NSURL = NSURL.decodeJson(url_field!) else {
+    guard let url: NSURL = NSURL.decodeJson(url_field) else {
       assertionFailure("field 'url' is not a NSURL")
       return nil
     }
@@ -183,6 +183,7 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
+ - 0.2.2 - 2015-09-22 - Bugfix, show correct error on missing field
  - 0.2.1 - 2015-09-14 - Bugfix, now works with released Xcode
  - **0.2.0** - 2015-09-11 - Update to Swift 2
  - 0.1.3 - 2015-07-22 - Show all Swift compiler errors
