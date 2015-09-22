@@ -183,6 +183,7 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
+ - 0.2.1 - 2015-09-14 - Bugfix, now works with released Xcode
  - **0.2.0** - 2015-09-11 - Update to Swift 2
  - 0.1.3 - 2015-07-22 - Show all Swift compiler errors
  - 0.1.2 - 2015-06-01 - Support for computed properties
