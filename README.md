@@ -14,7 +14,7 @@ Features
  * Allow for part of the datastructure to remain untyped
 
 See also the blog post:
-[Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation) 
+[Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation)
 
 
 Installation
@@ -23,7 +23,7 @@ Installation
 Install the latest release from NPM:
 
     > npm install -g swift-json-gen
-    
+
 Also copy [`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift)
 into your own project.
 This file contains some encoders and decoders for default Swift and Foundation
@@ -116,6 +116,25 @@ extension Blog {
 }
 ```
 
+
+Usage
+-----
+
+The generated encoder and decoder can be used in conjunction with NSJSONSerialization like so:
+
+```swift
+let inputStr = "{ \"title\": \"Hello, World!\", \"published\": true, \"author\": { \"first\": \"Tom\", \"last\": \"Lokhorst\" } }"
+let inputData = inputStr.dataUsingEncoding(NSUTF8StringEncoding)!
+let inputObj = try! NSJSONSerialization.JSONObjectWithData(inputData, options: [])
+
+let blog = Blog.decodeJson(inputObj)!
+
+let outputObj = blog.encodeJson()
+let outputData = try! NSJSONSerialization.dataWithJSONObject(outputObj, options: NSJSONWritingOptions.PrettyPrinted)
+let outputStr = String(data: outputData, encoding: NSUTF8StringEncoding)!
+```
+
+
 Customization
 -------------
 
@@ -130,7 +149,7 @@ like enums and classes.
 How it works
 ------------
 
-This program calls the Swift compiler and dumps the parsed AST.  
+This program calls the Swift compiler and dumps the parsed AST.
 (Using the command `xcrun swiftc -dump-ast SomeFile.swift`)
 
 This AST is traversed to look for struct definitions, for each struct
@@ -141,12 +160,13 @@ extention SomeStruct {
   static func decodeJson(json: AnyObject) -> SomeStruct? {
     ...
   }
-  
+
   func encodeJson() -> AnyObject {
     ...
   }
 }
 ```
+
 
 Compiling
 ---------
@@ -174,4 +194,6 @@ Releases
 Licence & Credits
 -----------------
 
-JsonGen is written by [Tom Lokhorst](https://twitter.com/tomlokhorst) of [Q42](http://q42.com) and available under the [MIT license](https://github.com/tomlokhorst/swift-json-gen/blob/develop/LICENSE), so feel free to use it in commercial and non-commercial projects.
+JsonGen is written by [Tom Lokhorst](https://twitter.com/tomlokhorst) of [Q42](http://q42.com)
+and available under the [MIT license](https://github.com/tomlokhorst/swift-json-gen/blob/develop/LICENSE),
+so feel free to use it in commercial and non-commercial projects.
