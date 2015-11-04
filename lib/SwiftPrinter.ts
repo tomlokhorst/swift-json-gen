@@ -115,7 +115,7 @@ function makeStructDecoder(struct: Struct) : string {
 
   lines.push('  static func decodeJson' + decodeArguments(struct) + ' throws -> ' + struct.baseName + ' {');
   lines.push('    guard let dict = json as? [String : AnyObject] else {');
-  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")');
+  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Object")');
   lines.push('    }');
   lines.push('');
   lines.push('    var errors: [String: JsonDecodeError] = [:]');
@@ -331,7 +331,7 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
 
     lines.push('}');
     lines.push('else {');
-    lines.push('  errors["' + name + '"] = JsonDecodeError.MissingValue');
+    lines.push('  errors["' + name + '"] = JsonDecodeError.MissingField');
     lines.push('}');
   }
 
@@ -350,8 +350,9 @@ function makeReturn(struct: Struct) : string[] {
   });
 
   lines.push('else {')
-  lines.push('  throw JsonDecodeError.StructErrors(errors)')
+  lines.push('  throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: errors)')
   lines.push('}')
+  lines.push('')
 
   var params = struct.varDecls.map(decl => decl.name + ': ' + decl.name)
   lines.push('return ' + struct.baseName + '(' + params.join(', ') + ')')
