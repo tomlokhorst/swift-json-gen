@@ -11,9 +11,9 @@ typealias JsonObject = [String: AnyJson]
 typealias JsonArray = [AnyJson]
 
 enum JsonDecodeError : ErrorType {
+  case MissingValue
   case WrongType(rawValue: AnyObject, expectedType: String)
   case WrongEnumRawValue(rawValue: AnyObject, enumType: String)
-  case MissingField(name: String)
   case ArrayElementErrors([Int: JsonDecodeError])
   case DictionaryErrors([String: JsonDecodeError])
   case StructErrors([String: JsonDecodeError])
@@ -175,7 +175,16 @@ extension NSDate
 
 extension Optional {
   static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped, _ json: AnyObject) throws -> Wrapped {
-    return try decodeWrapped(json)
+    do {
+      return try decodeWrapped(json)
+    }
+    catch let error as JsonDecodeError {
+      if case let .WrongType(rawValue: rawValue, expectedType: expectedType) = error {
+        throw JsonDecodeError.WrongType(rawValue: rawValue, expectedType: "\(expectedType)?")
+      }
+
+      throw error
+    }
   }
 
   func encodeJson(encodeJsonWrapped: Wrapped -> AnyObject) -> AnyObject {
