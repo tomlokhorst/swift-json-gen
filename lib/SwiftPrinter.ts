@@ -86,11 +86,15 @@ exports.makeFile = makeFile;
 function makeEnumDecoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson(json: AnyObject) -> ' + en.baseName + '? {');
-  lines.push('    if let value = json as? ' + en.rawTypeName + ' {');
-  lines.push('      return ' + en.baseName + '(rawValue: value)');
+  lines.push('  static func decodeJson(json: AnyObject) throws -> ' + en.baseName + ' {');
+  lines.push('    guard let rawValue = json as? ' + en.rawTypeName + ' else {');
+  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
-  lines.push('    return nil');
+  lines.push('    guard let value = ' + en.baseName + '(rawValue: rawValue) else {');
+  lines.push('      throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
+  lines.push('    }');
+  lines.push('');
+  lines.push('    return value');
   lines.push('  }');
 
   return lines.join('\n');
@@ -109,12 +113,13 @@ function makeEnumEncoder(en: Enum) : string {
 function makeStructDecoder(struct: Struct) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> ' + struct.baseName + '? {');
+  lines.push('  static func decodeJson' + decodeArguments(struct) + ' throws -> ' + struct.baseName + ' {');
   lines.push('    guard let dict = json as? [String : AnyObject] else {');
-  lines.push('      assertionFailure("json not a dictionary")');
-  lines.push('      return nil');
+  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")');
   lines.push('    }');
   lines.push('');
+  // lines.push('    var errors: [JsonDecodeError] = []');
+  // lines.push('');
 
   struct.varDecls.forEach(function (d) {
     var subs = makeFieldDecode(d, struct.typeArguments).map(indent(4));
@@ -148,7 +153,7 @@ function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
 
 function decodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(t => 'decode' + t + ': AnyObject -> ' + t + '?')
+    .map(t => 'decode' + t + ': AnyObject throws -> ' + t)
 
   parts.push('json: AnyObject');
 
@@ -233,7 +238,7 @@ function decodeFunction(arg: string, type: Type, genericDecoders: string[]) : st
     return '{ $0 as ' + typeName + ' }';
 
   if (isCastType(type))
-    return '{ $0 as? ' + typeName + ' }';
+    return '{ guard let result = $0 as? ' + typeName + ' else { throw JsonDecodeError.WrongType(rawValue: $0, expectedType: "' + typeName + '") }; return result }';
 
   if (genericDecoders.contains(typeName))
     return 'decode' + typeName + '(' + args + ')'
@@ -249,9 +254,10 @@ function decodeFunctionArgument(type: Type, genericDecoders: string[]) : string 
     return '{ $0 as ' + typeName + ' }';
 
   if (isCastType(type))
-    return '{ $0 as? ' + typeName + ' }';
+    return '{ guard let result = $0 as? ' + typeName + ' else { throw JsonDecodeError.WrongType(rawValue: $0, expectedType: "' + typeName + '") }; return result }';
+    // return '{ $0 as? ' + typeName + ' }'
 
-  return '{ ' + decodeFunction('$0', type, genericDecoders) + ' }'
+  return '{ try ' + decodeFunction('$0', type, genericDecoders) + ' }'
 }
 
 function typeToString(type: Type) : string {
@@ -282,12 +288,11 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
 
   if (type.baseName == 'Optional') {
     lines.push('let ' + fieldName + ': AnyObject? = dict["' + name + '"]');
-    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil || ' + fieldName + '! is NSNull ? nil : ' + decodeFunction(fieldName + '!', type, structTypeArguments))
+    lines.push('let ' + name + ': ' + typeString + ' = ' + fieldName + ' == nil || ' + fieldName + '! is NSNull ? nil : try ' + decodeFunction(fieldName + '!', type, structTypeArguments))
   }
   else {
     lines.push('guard let ' + fieldName + ': AnyObject = dict["' + name + '"] else {');
-    lines.push('  assertionFailure("field \'' + name + '\' is missing")');
-    lines.push('  return nil');
+    lines.push('  throw JsonDecodeError.MissingField(name: "' + name + '")');
     lines.push('}');
 
     if (isKnownType(type)) {
@@ -295,14 +300,12 @@ function makeFieldDecode(field: VarDecl, structTypeArguments: string[]) {
     }
     else if (isCastType(type)) {
       lines.push('guard let ' + name + ': ' + typeString + ' = ' + fieldName + ' as? ' + typeString + ' else {')
-      lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
-      lines.push('  return nil');
+      lines.push('  throw JsonDecodeError.WrongType(rawValue: ' + fieldName + ', expectedType: "' + typeString + '")');
       lines.push('}');
     }
     else {
-      lines.push('guard let ' + name + ': ' + typeString + ' = ' + decodeFunction(fieldName, type, structTypeArguments) + ' else {')
-      lines.push('  assertionFailure("field \'' + name + '\' is not a ' + typeString + '")');
-      lines.push('  return nil');
+      lines.push('guard let ' + name + ': ' + typeString + ' = try ' + decodeFunction(fieldName, type, structTypeArguments) + ' else {')
+      lines.push('  throw JsonDecodeError.WrongType(rawValue: ' + fieldName + ', expectedType: "' + typeString + '")');
       lines.push('}');
     }
   }
