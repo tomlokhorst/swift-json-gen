@@ -75,7 +75,7 @@ function generate() {
 
     var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
 
-    var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
+    var cmd = 'xcrun swiftc -sdk "$(xcrun --show-sdk-path --sdk iphoneos)" -target armv7-apple-ios9.0 -dump-ast ' + filenamesString
     var opts = {
       maxBuffer: 200*1024*1024
     }

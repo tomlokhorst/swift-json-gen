@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 
 struct Blog {
   let id: Int

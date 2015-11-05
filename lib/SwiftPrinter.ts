@@ -29,7 +29,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
   lines.push('//  See for details: https://github.com/tomlokhorst/swift-json-gen')
   lines.push('//');
   lines.push('');
-  lines.push('import Foundation');
+  lines.push('import UIKit');
   lines.push('');
 
   enums.forEach(function (s) {
