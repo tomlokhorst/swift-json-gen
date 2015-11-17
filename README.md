@@ -120,6 +120,8 @@ extension Blog {
 Usage
 -----
 
+Include the generated `YourFile+JsonGen.swift` file and the
+[`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift) file into your project.
 The generated encoder and decoder can be used in conjunction with NSJSONSerialization like so:
 
 ```swift
