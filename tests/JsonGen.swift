@@ -10,13 +10,41 @@ typealias AnyJson = AnyObject
 typealias JsonObject = [String: AnyJson]
 typealias JsonArray = [AnyJson]
 
-enum JsonDecodeError : ErrorType {
+public enum JsonDecodeError : ErrorType {
   case MissingField
   case WrongType(rawValue: AnyObject, expectedType: String)
   case WrongEnumRawValue(rawValue: AnyObject, enumType: String)
   case ArrayElementErrors([Int: JsonDecodeError])
   case DictionaryErrors([String: JsonDecodeError])
   case StructErrors(type: String, errors: [String: JsonDecodeError])
+}
+
+extension Dictionary where Key : String, Value : AnyJson {
+  static func decodeJson(json: AnyObject) throws -> JsonObject {
+    guard let result = json as? JsonObject else {
+      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonObject")
+    }
+
+    return result
+  }
+
+  func encodeJson() -> JsonObject {
+    return self
+  }
+}
+
+extension Array where Element : AnyJson {
+  static func decodeJson(json: AnyObject) throws -> JsonArray {
+    guard let result = json as? JsonArray else {
+      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonArray")
+    }
+
+    return result
+  }
+
+  func encodeJson() -> JsonArray {
+    return self
+  }
 }
 
 extension String {
