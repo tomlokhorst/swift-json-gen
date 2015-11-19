@@ -6,9 +6,9 @@
 
 import Foundation
 
-typealias AnyJson = AnyObject
-typealias JsonObject = [String: AnyJson]
-typealias JsonArray = [AnyJson]
+public typealias AnyJson = AnyObject
+public typealias JsonObject = [String: AnyJson]
+public typealias JsonArray = [AnyJson]
 
 public enum JsonDecodeError : ErrorType {
   case MissingField
@@ -19,36 +19,18 @@ public enum JsonDecodeError : ErrorType {
   case StructErrors(type: String, errors: [String: JsonDecodeError])
 }
 
-extension Dictionary where Key : String, Value : AnyJson {
-  static func decodeJson(json: AnyObject) throws -> JsonObject {
-    guard let result = json as? JsonObject else {
-      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonObject")
-    }
-
-    return result
+// Decode function for JsonObject.
+// Would be nicer as an extension method.
+public func JsonObject_decodeJson(json: AnyObject) throws -> JsonObject {
+  guard let result = json as? JsonObject else {
+    throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonObject")
   }
 
-  func encodeJson() -> JsonObject {
-    return self
-  }
-}
-
-extension Array where Element : AnyJson {
-  static func decodeJson(json: AnyObject) throws -> JsonArray {
-    guard let result = json as? JsonArray else {
-      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonArray")
-    }
-
-    return result
-  }
-
-  func encodeJson() -> JsonArray {
-    return self
-  }
+  return result
 }
 
 extension String {
-  static func decodeJson(json: AnyObject) throws -> String {
+  public static func decodeJson(json: AnyObject) throws -> String {
     guard let result = json as? String else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "String")
     }
@@ -56,13 +38,13 @@ extension String {
     return result
   }
 
-  func encodeJson() -> String {
+  public func encodeJson() -> String {
     return self
   }
 }
 
 extension Bool {
-  static func decodeJson(json: AnyObject) throws -> Bool {
+  public static func decodeJson(json: AnyObject) throws -> Bool {
     guard let result = json as? Bool else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Bool")
     }
@@ -70,13 +52,13 @@ extension Bool {
     return result
   }
 
-  func encodeJson() -> Bool {
+  public func encodeJson() -> Bool {
     return self
   }
 }
 
 extension Int {
-  static func decodeJson(json: AnyObject) throws -> Int {
+  public static func decodeJson(json: AnyObject) throws -> Int {
     guard let result = json as? Int else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Int")
     }
@@ -84,13 +66,13 @@ extension Int {
     return result
   }
 
-  func encodeJson() -> Int {
+  public func encodeJson() -> Int {
     return self
   }
 }
 
 extension UInt {
-  static func decodeJson(json: AnyObject) throws -> UInt {
+  public static func decodeJson(json: AnyObject) throws -> UInt {
     guard let result = json as? UInt else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "UInt")
     }
@@ -98,13 +80,13 @@ extension UInt {
     return result
   }
 
-  func encodeJson() -> UInt {
+  public func encodeJson() -> UInt {
     return self
   }
 }
 
 extension Int64 {
-  static func decodeJson(json: AnyObject) throws -> Int64 {
+  public static func decodeJson(json: AnyObject) throws -> Int64 {
     guard let number = json as? NSNumber else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Int64")
     }
@@ -112,13 +94,13 @@ extension Int64 {
     return number.longLongValue
   }
 
-  func encodeJson() -> NSNumber {
+  public func encodeJson() -> NSNumber {
     return NSNumber(longLong: self)
   }
 }
 
 extension Float {
-  static func decodeJson(json : AnyObject) throws -> Float {
+  public static func decodeJson(json : AnyObject) throws -> Float {
     guard let number = json as? NSNumber else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Float")
     }
@@ -126,13 +108,13 @@ extension Float {
     return number.floatValue
   }
 
-  func encodeJson() -> Float {
+  public func encodeJson() -> Float {
     return self
   }
 }
 
 extension Double {
-  static func decodeJson(json : AnyObject) throws -> Double {
+  public static func decodeJson(json : AnyObject) throws -> Double {
     guard let number = json as? NSNumber else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Double")
     }
@@ -140,13 +122,13 @@ extension Double {
     return number.doubleValue
   }
 
-  func encodeJson() -> Double {
+  public func encodeJson() -> Double {
     return self
   }
 }
 
 extension NSDictionary {
-  class func decodeJson(json: AnyObject) throws -> NSDictionary {
+  public static func decodeJson(json: AnyObject) throws -> NSDictionary {
     guard let result = json as? NSDictionary else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "NSDictionary")
     }
@@ -154,13 +136,13 @@ extension NSDictionary {
     return result
   }
 
-  func encodeJson() -> NSDictionary {
+  public func encodeJson() -> NSDictionary {
     return self
   }
 }
 
 extension NSURL {
-  class func decodeJson(json: AnyObject) throws -> NSURL {
+  public static func decodeJson(json: AnyObject) throws -> NSURL {
     guard let str = json as? String,
           let result = NSURL(string: str)
     else {
@@ -170,23 +152,23 @@ extension NSURL {
     return result
   }
 
-  func encodeJson() -> NSObject {
+  public func encodeJson() -> NSObject {
     return self.absoluteString ?? NSNull()
   }
 }
 
 extension NSDate
 {
-  struct JsonGenDateFormatter {
+  private struct JsonGenDateFormatter {
     static let withTimeZone : NSDateFormatter = {
       let formatter = NSDateFormatter()
       formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
 
       return formatter
-      }()
+    }()
   }
 
-  class func decodeJson(json : AnyObject) throws -> NSDate {
+  public static func decodeJson(json : AnyObject) throws -> NSDate {
     guard let str = json as? String,
           let result = JsonGenDateFormatter.withTimeZone.dateFromString(str)
     else {
@@ -196,13 +178,13 @@ extension NSDate
     return result
   }
 
-  func encodeJson() -> String {
+  public func encodeJson() -> String {
     return JsonGenDateFormatter.withTimeZone.stringFromDate(self)
   }
 }
 
 extension Optional {
-  static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped, _ json: AnyObject) throws -> Wrapped {
+  public static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped, _ json: AnyObject) throws -> Wrapped? {
     do {
       return try decodeWrapped(json)
     }
@@ -215,13 +197,13 @@ extension Optional {
     }
   }
 
-  func encodeJson(encodeJsonWrapped: Wrapped -> AnyObject) -> AnyObject {
+  public func encodeJson(encodeJsonWrapped: Wrapped -> AnyObject) -> AnyObject {
     return self.map(encodeJsonWrapped) ?? NSNull()
   }
 }
 
 extension Array {
-  static func decodeJson(decodeElement: AnyObject throws -> Element, _ json: AnyObject) throws -> [Element] {
+  public static func decodeJson(decodeElement: AnyObject throws -> Element, _ json: AnyObject) throws -> [Element] {
     guard let arr = json as? [AnyObject] else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Array")
     }
@@ -245,13 +227,13 @@ extension Array {
     return result
   }
 
-  func encodeJson(encodeJsonElement: Element -> AnyObject) -> [AnyObject] {
+  public func encodeJson(encodeJsonElement: Element -> AnyObject) -> [AnyObject] {
     return self.map(encodeJsonElement)
   }
 }
 
 extension Dictionary {
-  static func decodeJson(decodeKey: AnyObject throws -> Key, _ decodeValue: AnyObject throws -> Value, _ json: AnyObject) throws -> [Key: Value] {
+  public static func decodeJson(decodeKey: AnyObject throws -> Key, _ decodeValue: AnyObject throws -> Value, _ json: AnyObject) throws -> [Key: Value] {
 
     guard let dict = json as? [Key: AnyObject] else {
       throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")
@@ -276,7 +258,7 @@ extension Dictionary {
     return result
   }
 
-  func encodeJson(encodeJsonKey: Key -> String, _ encodeJsonValue: Value -> AnyObject) -> [String: AnyObject] {
+  public func encodeJson(encodeJsonKey: Key -> String, _ encodeJsonValue: Value -> AnyObject) -> [String: AnyObject] {
     var dict: [String: AnyObject] = [:]
 
     for (key, val) in self {
@@ -294,11 +276,11 @@ extension Dictionary {
 
 extension JsonDecodeError: CustomStringConvertible {
 
-  var description: String {
+  public var description: String {
     return multiline(Verbosity.Multiple).joinWithSeparator("\n")
   }
 
-  var fullDescription: String {
+  public var fullDescription: String {
     return multiline(Verbosity.Full).joinWithSeparator("\n")
   }
 
