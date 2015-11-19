@@ -49,54 +49,44 @@ To generate Json decoders based a file of structs run:
 
     > swift-json-gen example/Blog.swift
 
-This will generate the file `example/Blog+JsonGen.swift` with the following
-content:
+
+This will generate the file
+[`example/Blog+JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/Blog+JsonGen.swift)
+with the following (truncated) content:
 
 ```swift
 extension Blog {
-  static func decodeJson(json: AnyObject) -> Blog? {
+  static func decodeJson(json: AnyObject) throws -> Blog {
     guard let dict = json as? [String : AnyObject] else {
-      assertionFailure("json not a dictionary")
-      return nil
+      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Object")
     }
 
-    guard let id_field: AnyObject = dict["id"] else {
-      assertionFailure("field 'id' is missing")
-      return nil
+    var errors: [String: JsonDecodeError] = [:]
+
+    var id_optional: Int?
+
+    if let id_field: AnyObject = dict["id"] {
+      do {
+        id_optional = try Int.decodeJson(id_field)
+      }
+      catch let error as JsonDecodeError {
+        errors["id"] = error
+      }
     }
-    guard let id: Int = Int.decodeJson(id_field) else {
-      assertionFailure("field 'id' is not a Int")
-      return nil
+    else {
+      errors["id"] = JsonDecodeError.MissingField
     }
 
-    guard let name_field: AnyObject = dict["name"] else {
-      assertionFailure("field 'name' is missing")
-      return nil
-    }
-    guard let name: String = String.decodeJson(name_field) else {
-      assertionFailure("field 'name' is not a String")
-      return nil
-    }
+    .... TRUNCATED ...
 
-    let author_field: AnyObject? = dict["author"]
-    let author: String? = author_field == nil || author_field! is NSNull ? nil : Optional.decodeJson({ String.decodeJson($0) }, author_field!)
-
-    guard let needsPassword_field: AnyObject = dict["needsPassword"] else {
-      assertionFailure("field 'needsPassword' is missing")
-      return nil
-    }
-    guard let needsPassword: Bool = Bool.decodeJson(needsPassword_field) else {
-      assertionFailure("field 'needsPassword' is not a Bool")
-      return nil
-    }
-
-    guard let url_field: AnyObject = dict["url"] else {
-      assertionFailure("field 'url' is missing")
-      return nil
-    }
-    guard let url: NSURL = NSURL.decodeJson(url_field) else {
-      assertionFailure("field 'url' is not a NSURL")
-      return nil
+    guard
+      let id = id_optional,
+      let name = name_optional,
+      let author = author_optional,
+      let needsPassword = needsPassword_optional,
+      let url = url_optional
+    else {
+      throw JsonDecodeError.StructErrors(type: "Blog", errors: errors)
     }
 
     return Blog(id: id, name: name, author: author, needsPassword: needsPassword, url: url)
@@ -129,7 +119,7 @@ let inputStr = "{ \"title\": \"Hello, World!\", \"published\": true, \"author\":
 let inputData = inputStr.dataUsingEncoding(NSUTF8StringEncoding)!
 let inputObj = try! NSJSONSerialization.JSONObjectWithData(inputData, options: [])
 
-let blog = Blog.decodeJson(inputObj)!
+let blog = try! Blog.decodeJson(inputObj)
 
 let outputObj = blog.encodeJson()
 let outputData = try! NSJSONSerialization.dataWithJSONObject(outputObj, options: NSJSONWritingOptions.PrettyPrinted)
@@ -159,7 +149,7 @@ This AST is traversed to look for struct definitions, for each struct
 
 ```swift
 extention SomeStruct {
-  static func decodeJson(json: AnyObject) -> SomeStruct? {
+  static func decodeJson(json: AnyObject) throws -> SomeStruct {
     ...
   }
 
