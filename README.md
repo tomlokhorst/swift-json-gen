@@ -12,6 +12,7 @@ Features
  * Handles type aliases
  * Supports primitive types, nested types and custom generic types
  * Allow for part of the datastructure to remain untyped
+ * Excelent error messages when JSON decoding fails: [Improving error messages](http://q42.com/blog/post/134258806788/improving-error-messages-from-generated-json)
 
 See also the blog post:
 [Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation)
