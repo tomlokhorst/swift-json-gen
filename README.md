@@ -11,6 +11,7 @@ Features
  * Works on individual `.swift` files or whole directories
  * Handles type aliases
  * Supports primitive types, nested types and custom generic types
+ * Allow for custom encoders and decoders
  * Allow for part of the datastructure to remain untyped
  * Excelent error messages when JSON decoding fails: [Improving error messages](http://q42.com/blog/post/134258806788/improving-error-messages-from-generated-json)
 
