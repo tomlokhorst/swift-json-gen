@@ -358,7 +358,9 @@ extension JsonDecodeError: CustomStringConvertible {
 
     func prefix(prefix: String, lines: [String]) -> [String] {
       if let first = lines.first {
-        return ["\(prefix)\(first)"] + lines.suffixFrom(1).map { "   \($0)" }
+        let fst = ["\(prefix)\(first)"]
+        let rst = lines.suffixFrom(1).map { "   \($0)" }
+        return fst + rst
       }
 
       return []
