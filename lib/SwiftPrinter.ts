@@ -147,6 +147,10 @@ function decodeArguments(struct: Struct) : string {
 }
 
 function makeStructDecoderBody(struct: Struct) : string[] {
+  if (struct.varDecls.length == 0) {
+    return ['return ' + struct.baseName + '()'];
+  }
+
   var lines = [];
 
   lines.push('let decoder = try JsonDecoder(json: json)');
@@ -204,17 +208,11 @@ function decodeFunction(type: Type, genericDecoders: string[]) : string {
 
 function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
   var lines = [];
+
   lines.push('  func encodeJson' + encodeArguments(struct) + ' -> [String: AnyObject] {');
-  lines.push('    var dict: [String: AnyObject] = [:]');
-  lines.push('');
 
-  struct.varDecls.forEach(function (d) {
-    var subs = makeFieldEncode(d, struct.typeArguments, enums).map(indent(4));
-    lines = lines.concat(subs);
-  });
-
-  lines.push('');
-  lines.push('    return dict');
+  var body = makeStructEncoderBody(struct, enums).map(indent(4));
+  lines = lines.concat(body);
   lines.push('  }');
 
   return lines.join('\n');
@@ -231,15 +229,24 @@ function encodeArguments(struct: Struct) : string {
   return '(' + parts.join(', ') + ')';
 }
 
-function indent(nr) {
-  return function (s) {
-    return s == '' ? s :  Array(nr + 1).join(' ') + s;
-  };
-}
+function makeStructEncoderBody(struct: Struct, enums: Enum[]) : string[] {
+  if (struct.varDecls.length == 0) {
+    return ['return [:]'];
+  }
 
-function isKnownType(type: Type) : boolean {
-  var types = [ 'AnyObject', 'AnyJson' ];
-  return types.contains(type.alias) || types.contains(type.baseName);
+  var lines = [];
+  lines.push('var dict: [String: AnyObject] = [:]');
+  lines.push('');
+
+  struct.varDecls.forEach(function (d) {
+    var subs = makeFieldEncode(d, struct.typeArguments, enums);
+    lines = lines.concat(subs);
+  });
+
+  lines.push('');
+  lines.push('return dict');
+
+  return lines;
 }
 
 function encodeFunction(name: string, type: Type, genericEncoders: string[]) : string {
@@ -265,14 +272,25 @@ function makeFieldEncode(field: VarDecl, structTypeArguments: string[], enums: E
 
   var prefix = ''
 
-    if (type.baseName == 'Dictionary' && type.genericArguments.length == 2) {
-      var keyType = type.genericArguments[0].baseName;
-      var enum_ = enums.filter(e => e.baseName == keyType)[0];
-      if (keyType != 'String' && enum_.rawTypeName != 'String') {
-        lines.push('/* WARNING: Json only supports Strings as keys in dictionaries */');
-      }
+  if (type.baseName == 'Dictionary' && type.genericArguments.length == 2) {
+    var keyType = type.genericArguments[0].baseName;
+    var enum_ = enums.filter(e => e.baseName == keyType)[0];
+    if (keyType != 'String' && enum_.rawTypeName != 'String') {
+      lines.push('/* WARNING: Json only supports Strings as keys in dictionaries */');
     }
+  }
   lines.push('dict["' + name + '"] = ' + encodeFunction(name, type, structTypeArguments));
 
   return lines;
+}
+
+function indent(nr) {
+  return function (s) {
+    return s == '' ? s :  Array(nr + 1).join(' ') + s;
+  };
+}
+
+function isKnownType(type: Type) : boolean {
+  var types = [ 'AnyObject', 'AnyJson' ];
+  return types.contains(type.alias) || types.contains(type.baseName);
 }
