@@ -270,7 +270,7 @@ function parse(text) {
   var results = []
 
   text = text.trim();
-  text = text.replace(/=\[([^\]]*)\]'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
+  // text = text.replace(/=\[([^\]]*)\]'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } ) // Workaround for swiftc 2.0
   text = text.replace(/='([^']*)'/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
   text = text.replace(/"<([^>]*)>/g, function (n) { return n.replace(/ /g, 'JSON_GEN_SPACE') } )
 
