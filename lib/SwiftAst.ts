@@ -140,7 +140,9 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
   var fullName = ast.key(0);
   var typeArgs = genericArguments(fullName)
   var varDecls = ast.children('var_decl')
-    .filter(a => a.attr('storage_kind') == 'stored_with_trivial_accessors')
+    // Swift <= 2.1: storage_kind is 'stored'
+    // Swift == 2.2: storage_kind is 'stored_with_trivial_accessors'
+    .filter(a => a.attr('storage_kind') == 'stored' || a.attr('storage_kind') == 'stored_with_trivial_accessors')
     .map(a => varDecl(a, aliases));
 
   var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
