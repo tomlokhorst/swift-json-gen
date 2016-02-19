@@ -1,3 +1,5 @@
+// Deeply nested implementations: https://github.com/tomlokhorst/swift-json-gen/issues/9
+
 typealias X = Int
 
 struct Test11a {
@@ -24,11 +26,15 @@ struct Test11a {
 //      }
     }
 
-//    static func decodeJson(json: AnyObject) -> Test11b? {
-//      if let value = json as? X {
-//        return Test11b(rawValue: value)
+//    static func decodeJson(json: AnyObject) throws -> Test11b {
+//      guard let rawValue = json as? X else {
+//        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "X")
 //      }
-//      return nil
+//      guard let value = Test11a.Test11b(rawValue: rawValue) else {
+//        throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "Test11a.Test11b")
+//      }
+//
+//      return value
 //    }
   }
 }
