@@ -47,6 +47,22 @@ function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
 }
 
 function generate() {
+  const supportedVersions = ['Apple Swift version 2.1', 'Apple Swift version 2.2'];
+
+  exec('swiftc --version', function (error, stdout, stderr) {
+    const versions = supportedVersions.filter(version => stdout.startsWith(version))
+    if (versions.length == 0) {
+      console.log('WARNING: Using untested swiftc version. swift-json-gen works has been tested with:')
+      supportedVersions.forEach(function (version) {
+        console.log(' - ' + version);
+      });
+    }
+
+    processCmdArgs();
+  });
+}
+
+function processCmdArgs() {
   var argv = process.argv;
 
   if (argv.length < 3) {
