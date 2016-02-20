@@ -17,7 +17,7 @@ struct Test11a {
         case Two = 2
       }
 
-//      func encodeJson() -> AnyObject {
+//      func encodeJson() -> [String: AnyObject] {
 //        var dict: [String: AnyObject] = [:]
 //
 //        dict["x"] = x.encodeJson()
@@ -41,8 +41,8 @@ struct Test11a {
 
 
 extension Test11a.Test11b.Test11c.Test11d {
-//
-//  func encodeJson() -> AnyObject {
+
+//  func encodeJson() -> X {
 //    return rawValue
 //  }
 }
