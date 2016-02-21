@@ -52,7 +52,7 @@ class JsonDecoder {
 
   func decode<T>(name: String, decoder: AnyObject throws -> T?) throws -> T?? {
 
-    if let field: AnyObject = dict[name] where !(field is NSNull) {
+    if let field: AnyObject = dict[name] {
       do {
         return try decoder(field)
       }
@@ -236,6 +236,10 @@ extension NSDate
 extension Optional {
   public static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped) -> AnyObject throws -> Wrapped? {
     return { json in
+      if json is NSNull {
+        return nil
+      }
+
       do {
         return try decodeWrapped(json)
       }
