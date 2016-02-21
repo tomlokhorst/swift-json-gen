@@ -14,13 +14,13 @@ public enum JsonDecodeError : ErrorType {
   case MissingField
   case WrongType(rawValue: AnyObject, expectedType: String)
   case WrongEnumRawValue(rawValue: AnyObject, enumType: String)
-  case ArrayElementErrors([Int: JsonDecodeError])
-  case DictionaryErrors([String: JsonDecodeError])
-  case StructErrors(type: String, errors: [String: JsonDecodeError])
+  case ArrayElementErrors([(Int, JsonDecodeError)])
+  case DictionaryErrors([(String, JsonDecodeError)])
+  case StructErrors(type: String, errors: [(String, JsonDecodeError)])
 }
 
 class JsonDecoder {
-  var errors: [String: JsonDecodeError] = [:]
+  var errors: [(String, JsonDecodeError)] = []
   let dict: [String : AnyObject]
 
   init(json: AnyObject) throws {
@@ -40,11 +40,11 @@ class JsonDecoder {
         return try decoder(field)
       }
       catch let error as JsonDecodeError {
-        errors[name] = error
+        errors.append((name, error))
       }
     }
     else {
-      errors[name] = JsonDecodeError.MissingField
+      errors.append((name, JsonDecodeError.MissingField))
     }
 
     return nil
@@ -57,7 +57,7 @@ class JsonDecoder {
         return try decoder(field)
       }
       catch let error as JsonDecodeError {
-        errors[name] = error
+        errors.append((name, error))
       }
     }
     else {
@@ -265,7 +265,7 @@ extension Array {
         throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Array")
       }
 
-      var errors: [Int: JsonDecodeError] = [:]
+      var errors: [(Int, JsonDecodeError)] = []
       var result: [Element] = []
 
       for (index, element) in arr.enumerate() {
@@ -273,7 +273,7 @@ extension Array {
           result.append(try decodeElement(element))
         }
         catch let error as JsonDecodeError {
-          errors[index] = error
+          errors.append((index, error))
         }
       }
 
@@ -297,7 +297,7 @@ extension Dictionary {
         throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")
       }
 
-      var errors: [String: JsonDecodeError] = [:]
+      var errors: [(String, JsonDecodeError)] = []
       var result: [Key: Value] = [:]
 
       for (key, val) in dict {
@@ -305,7 +305,7 @@ extension Dictionary {
           result[key] = try decodeValue(val)
         }
         catch let error as JsonDecodeError {
-          errors["\(key)"] = error
+          errors.append(("\(key)", error))
         }
       }
 
