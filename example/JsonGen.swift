@@ -14,19 +14,68 @@ public enum JsonDecodeError : ErrorType {
   case MissingField
   case WrongType(rawValue: AnyObject, expectedType: String)
   case WrongEnumRawValue(rawValue: AnyObject, enumType: String)
-  case ArrayElementErrors([Int: JsonDecodeError])
-  case DictionaryErrors([String: JsonDecodeError])
-  case StructErrors(type: String, errors: [String: JsonDecodeError])
+  case ArrayElementErrors([(Int, JsonDecodeError)])
+  case DictionaryErrors([(String, JsonDecodeError)])
+  case StructErrors(type: String, errors: [(String, JsonDecodeError)])
 }
 
-// Decode function for JsonObject.
-// Would be nicer as an extension method.
-public func JsonObject_decodeJson(json: AnyObject) throws -> JsonObject {
-  guard let result = json as? JsonObject else {
-    throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonObject")
+class JsonDecoder {
+  var errors: [(String, JsonDecodeError)] = []
+  let dict: [String : AnyObject]
+
+  init(json: AnyObject) throws {
+
+    guard let dict = json as? [String : AnyObject] else {
+      self.dict = [:] // Init field, for Swift 2.0
+      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Object")
+    }
+
+    self.dict = dict
   }
 
-  return result
+  func decode<T>(name: String, decoder: AnyObject throws -> T) throws -> T? {
+
+    if let field: AnyObject = dict[name] {
+      do {
+        return try decoder(field)
+      }
+      catch let error as JsonDecodeError {
+        errors.append((name, error))
+      }
+    }
+    else {
+      errors.append((name, JsonDecodeError.MissingField))
+    }
+
+    return nil
+  }
+
+  func decode<T>(name: String, decoder: AnyObject throws -> T?) throws -> T?? {
+
+    if let field: AnyObject = dict[name] {
+      do {
+        return try decoder(field)
+      }
+      catch let error as JsonDecodeError {
+        errors.append((name, error))
+      }
+    }
+    else {
+      return .Some(nil)
+    }
+
+    return nil
+  }
+}
+
+extension SequenceType where Generator.Element == (String, AnyObject) {
+  public static func decodeJson(json: AnyObject) throws -> JsonObject {
+    guard let result = json as? JsonObject else {
+      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "JsonObject")
+    }
+
+    return result
+  }
 }
 
 extension String {
@@ -185,16 +234,22 @@ extension NSDate
 }
 
 extension Optional {
-  public static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped, _ json: AnyObject) throws -> Wrapped? {
-    do {
-      return try decodeWrapped(json)
-    }
-    catch let error as JsonDecodeError {
-      if case let .WrongType(rawValue: rawValue, expectedType: expectedType) = error {
-        throw JsonDecodeError.WrongType(rawValue: rawValue, expectedType: "\(expectedType)?")
+  public static func decodeJson(decodeWrapped: AnyObject throws -> Wrapped) -> AnyObject throws -> Wrapped? {
+    return { json in
+      if json is NSNull {
+        return nil
       }
 
-      throw error
+      do {
+        return try decodeWrapped(json)
+      }
+      catch let error as JsonDecodeError {
+        if case let .WrongType(rawValue: rawValue, expectedType: expectedType) = error {
+          throw JsonDecodeError.WrongType(rawValue: rawValue, expectedType: "\(expectedType)?")
+        }
+
+        throw error
+      }
     }
   }
 
@@ -204,28 +259,30 @@ extension Optional {
 }
 
 extension Array {
-  public static func decodeJson(decodeElement: AnyObject throws -> Element, _ json: AnyObject) throws -> [Element] {
-    guard let arr = json as? [AnyObject] else {
-      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Array")
-    }
-
-    var errors: [Int: JsonDecodeError] = [:]
-    var result: [Element] = []
-
-    for (index, element) in arr.enumerate() {
-      do {
-        result.append(try decodeElement(element))
+  public static func decodeJson(decodeElement: AnyObject throws -> Element) -> AnyObject throws -> [Element] {
+    return { json in
+      guard let arr = json as? [AnyObject] else {
+        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Array")
       }
-      catch let error as JsonDecodeError {
-        errors[index] = error
+
+      var errors: [(Int, JsonDecodeError)] = []
+      var result: [Element] = []
+
+      for (index, element) in arr.enumerate() {
+        do {
+          result.append(try decodeElement(element))
+        }
+        catch let error as JsonDecodeError {
+          errors.append((index, error))
+        }
       }
-    }
 
-    if errors.count > 0 {
-      throw JsonDecodeError.ArrayElementErrors(errors)
-    }
+      if errors.count > 0 {
+        throw JsonDecodeError.ArrayElementErrors(errors)
+      }
 
-    return result
+      return result
+    }
   }
 
   public func encodeJson(encodeJsonElement: Element -> AnyObject) -> [AnyObject] {
@@ -234,29 +291,30 @@ extension Array {
 }
 
 extension Dictionary {
-  public static func decodeJson(decodeKey: AnyObject throws -> Key, _ decodeValue: AnyObject throws -> Value, _ json: AnyObject) throws -> [Key: Value] {
-
-    guard let dict = json as? [Key: AnyObject] else {
-      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")
-    }
-
-    var errors: [String: JsonDecodeError] = [:]
-    var result: [Key: Value] = [:]
-
-    for (key, val) in dict {
-      do {
-        result[key] = try decodeValue(val)
+  public static func decodeJson(decodeKey: AnyObject throws -> Key, _ decodeValue: AnyObject throws -> Value) -> AnyObject throws -> [Key: Value] {
+    return { json in
+      guard let dict = json as? [Key: AnyObject] else {
+        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Dictionary")
       }
-      catch let error as JsonDecodeError {
-        errors["\(key)"] = error
+
+      var errors: [(String, JsonDecodeError)] = []
+      var result: [Key: Value] = [:]
+
+      for (key, val) in dict {
+        do {
+          result[key] = try decodeValue(val)
+        }
+        catch let error as JsonDecodeError {
+          errors.append(("\(key)", error))
+        }
       }
-    }
 
-    if errors.count > 0 {
-      throw JsonDecodeError.DictionaryErrors(errors)
-    }
+      if errors.count > 0 {
+        throw JsonDecodeError.DictionaryErrors(errors)
+      }
 
-    return result
+      return result
+    }
   }
 
   public func encodeJson(encodeJsonKey: Key -> String, _ encodeJsonValue: Value -> AnyObject) -> [String: AnyObject] {

@@ -59,36 +59,22 @@ with the following (truncated) content:
 ```swift
 extension Blog {
   static func decodeJson(json: AnyObject) throws -> Blog {
-    guard let dict = json as? [String : AnyObject] else {
-      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "Object")
-    }
+    let decoder = try JsonDecoder(json: json)
 
-    var errors: [String: JsonDecodeError] = [:]
+    let _id = try decoder.decode("id", decoder: Int.decodeJson)
+    let _name = try decoder.decode("name", decoder: String.decodeJson)
+    let _author = try decoder.decode("author", decoder: Optional.decodeJson(String.decodeJson))
+    let _needsPassword = try decoder.decode("needsPassword", decoder: Bool.decodeJson)
+    let _url = try decoder.decode("url", decoder: NSURL.decodeJson)
 
-    var id_optional: Int?
-
-    if let id_field: AnyObject = dict["id"] {
-      do {
-        id_optional = try Int.decodeJson(id_field)
-      }
-      catch let error as JsonDecodeError {
-        errors["id"] = error
-      }
-    }
+    guard let
+      id = _id,
+      name = _name,
+      author = _author,
+      needsPassword = _needsPassword,
+      url = _url
     else {
-      errors["id"] = JsonDecodeError.MissingField
-    }
-
-    .... TRUNCATED ...
-
-    guard
-      let id = id_optional,
-      let name = name_optional,
-      let author = author_optional,
-      let needsPassword = needsPassword_optional,
-      let url = url_optional
-    else {
-      throw JsonDecodeError.StructErrors(type: "Blog", errors: errors)
+      throw JsonDecodeError.StructErrors(type: "Blog", errors: decoder.errors)
     }
 
     return Blog(id: id, name: name, author: author, needsPassword: needsPassword, url: url)
