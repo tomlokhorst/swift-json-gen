@@ -156,34 +156,40 @@ function makeStructDecoderBody(struct: Struct) : string[] {
   lines.push('let decoder = try JsonDecoder(json: json)');
   lines.push('');
 
+  struct.varDecls.forEach(function (field, ix) {
+    var decoder = decodeFunction(field.type, struct.typeArguments)
+    var line = 'let _' + field.name + ' = '
+      + 'try decoder.decode("' + field.name + '", decoder: ' + decoder + ')';
+
+    lines.push(line)
+  });
+
+  lines.push('');
+
   var fieldDecodes = struct.varDecls.map(function (field, ix) {
     var isLast = struct.varDecls.length == ix + 1
-    var commaOrBrace = isLast ? ' {' : ','
+    var commaOrBrace = isLast ? '' : ','
 
-    var decoder = decodeFunction(field.type, struct.typeArguments)
-    var line = '_' + field.name + ' = '
-      + 'try decoder.decode("' + field.name + '", decoder: ' + decoder + ')'
-      + commaOrBrace;
+    var line = field.name + ' = _' + field.name + commaOrBrace;
 
     return line
   });
 
   if (fieldDecodes.length == 1) {
-    lines.push('if let ' + fieldDecodes[0]);
+    lines.push('guard let ' + fieldDecodes[0] + ' else {');
   }
   else {
-    lines.push('if let');
+    lines.push('guard let');
     lines = lines.concat(fieldDecodes.map(indent(2)));
+    lines.push('else {');
   }
 
-  lines.push('');
-
-  var params = struct.varDecls.map(decl => decl.name + ': _' + decl.name)
-  lines.push('  return ' + struct.baseName + '(' + params.join(', ') + ')')
+  var params = struct.varDecls.map(decl => decl.name + ': ' + decl.name)
+  lines.push('  throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
   lines.push('}');
 
   lines.push('')
-  lines.push('throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
+  lines.push('return ' + struct.baseName + '(' + params.join(', ') + ')')
 
   return lines
 }
