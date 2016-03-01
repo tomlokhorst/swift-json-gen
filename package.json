@@ -9,5 +9,10 @@
   "repository": "tomlokhorst/swift-json-gen",
   "homepage": "https://github.com/tomlokhorst/swift-json-gen",
   "author": "Tom Lokhorst",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies":
+  {
+    "yargs": "~4.2",
+    "mkdirp": "~0.5"
+  }
 }

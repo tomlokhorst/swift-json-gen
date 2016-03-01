@@ -5,6 +5,7 @@
 var exec = require('child_process').exec
 var path = require('path')
 var fs = require('fs')
+var mkdirp = require('mkdirp')
 
 require('./Extensions')
 var ast = require('./SwiftAst')
@@ -19,6 +20,61 @@ interface FileDesc {
   outbase: string;
 }
 
+function generate() {
+  const supportedVersions = ['Apple Swift version 2.1', 'Apple Swift version 2.2'];
+
+  exec('swiftc --version', function (error, stdout, stderr) {
+    const versions = supportedVersions.filter(version => stdout.startsWith(version))
+    if (versions.length == 0) {
+      console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
+      supportedVersions.forEach(function (version) {
+        console.log(' - ' + version);
+      });
+    }
+
+    processCmdArgs((error, inputs, outputDirectory) => handleFiles(inputs, outputDirectory));
+  });
+}
+
+function processCmdArgs(cb) {
+
+  var usage = 'USAGE: $0 [-o output_directory] source_files...\n\n'
+    + '  Generates +JsonGen.swift files for all swift files supplied,\n'
+    + '  filenames ending with +Extensions.swift are excluded.'
+
+  var yargs = require('yargs')
+    .usage(usage)
+    .help()
+    .alias('h', 'help')
+    .alias('o', 'output')
+    .alias('v', 'version')
+    .describe('o', 'Output directory')
+    .describe('v', 'Print version')
+
+  var argv = yargs.argv
+
+  if (argv.version) {
+    var pjson =  require('../package.json');
+    console.log(pjson.version);
+    return
+  }
+
+  const inputs = argv._
+  const outputDirectory = argv.output
+
+  if (inputs.length == 0) {
+    yargs.showHelp()
+    return
+  }
+
+  if (typeof(outputDirectory) == 'string') {
+    mkdirp(outputDirectory, err => cb(err, argv._, outputDirectory))
+  }
+  else {
+    cb(null, inputs)
+  }
+}
+
 function fullFilenames(input: string) : string[] {
 
   if (fs.statSync(input).isDirectory()) {
@@ -31,12 +87,12 @@ function fullFilenames(input: string) : string[] {
   throw new Error("input is neither a file nor a directory");
 }
 
-function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
+function fileDescription(filename: string, allFilenames: string[], outputDirectory: string) : FileDesc {
 
   var dirname = path.dirname(filename)
   var basename = path.basename(filename)
   var outbase = basename.replace('.swift', '+JsonGen.swift')
-  var outfile = path.join(dirname, outbase)
+  var outfile = outputDirectory ? path.join(outputDirectory, outbase) : path.join(dirname, outbase)
 
   return {
     filename: basename,
@@ -46,99 +102,69 @@ function fileDescription(filename: string, allFilenames: string[]) : FileDesc {
   }
 }
 
-function generate() {
-  const supportedVersions = ['Apple Swift version 2.1', 'Apple Swift version 2.2'];
+function handleFiles(inputs: string[], outputDirectory: string) {
+  var filenames = inputs.flatMap(fullFilenames);
 
-  exec('swiftc --version', function (error, stdout, stderr) {
-    const versions = supportedVersions.filter(version => stdout.startsWith(version))
-    if (versions.length == 0) {
-      console.log('WARNING: Using untested swiftc version. swift-json-gen works has been tested with:')
-      supportedVersions.forEach(function (version) {
-        console.log(' - ' + version);
-      });
-    }
+  var files = filenames
+    .map(fn => fileDescription(fn, filenames, outputDirectory))
+    .filter(function (f) {
+      var isExtensions = f.filename.indexOf('+Extensions.swift') > 0;
+      var isJsonGen = f.filename.indexOf('+JsonGen.swift') > 0;
+      var isSwift = f.filename.indexOf('.swift') > 0;
 
-    processCmdArgs();
-  });
-}
-
-function processCmdArgs() {
-  var argv = process.argv;
-
-  if (argv.length < 3) {
-    console.log('USAGE: swift-json-gen some/directory/FileWithStructs.swift');
-    console.log('  Generates +JsonGen.swift files for all swift files supplied,');
-    console.log('  filenames ending with +Extensions.swift are excluded.');
-    console.log('');
-  }
-  if (argv[2] == '--version') {
-    var pjson =  require('../package.json');
-    console.log(pjson.version);
-  }
-  else {
-    var inputs = argv.slice(2);
-    var filenames = inputs.flatMap(fullFilenames);
-
-    var files = filenames
-      .map(fn => fileDescription(fn, filenames))
-      .filter(function (f) {
-        var isExtensions = f.filename.indexOf('+Extensions.swift') > 0;
-        var isJsonGen = f.filename.indexOf('+JsonGen.swift') > 0;
-        var isSwift = f.filename.indexOf('.swift') > 0;
-
-        return isSwift && !isJsonGen && !isExtensions;
-      });
-
-    var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
-
-    var swiftc = 'swiftc'
-    // var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
-    var cmd = 'xcrun ' + swiftc + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
-
-    var opts = {
-      maxBuffer: 200*1024*1024
-    }
-
-    exec(cmd, opts, function (error, stdout, stderr) {
-
-      var parseResult = parseXcOutput(stderr)
-      var xcoutputs = parseResult.outputs
-      var errors = parseResult.errors
-
-      // If an actual error (not a `(source_file`), print and stop
-      if (errors.length) {
-        errors.forEach(error => {
-          console.error(error)
-        })
-        return;
-      }
-
-      if (xcoutputs.length != files.length) {
-        console.error('INTERNAL ERROR - swift-json-gen');
-        console.error('inconsistency; xcoutputs not equal in length to files');
-        console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
-        console.error();
-        console.error('Please report this at: https://github.com/tomlokhorst/swift-json-gen/issues');
-        return
-      }
-
-      var fileAsts = xcoutputs.map(ast.parse);
-      var mergedFileAsts = [].concat.apply([], fileAsts);
-      var globalAttrs = ast.globalAttrs(mergedFileAsts);
-
-      for (var i = 0; i < files.length; i++) {
-        var file = files[i];
-        if (file.filename == 'JsonGen.swift') continue;
-
-        var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase);
-        if (lines.length == 0) continue;
-
-        var text = lines.join('\n');
-
-        printFile(text, globalAttrs, file.outbase, file.outfile);
-      }
+      return isSwift && !isJsonGen && !isExtensions;
     });
+
+  var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
+
+  var swiftc = 'swiftc'
+  // var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+  var cmd = 'xcrun ' + swiftc + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
+
+  var opts = {
+    maxBuffer: 200*1024*1024
   }
+
+  exec(cmd, opts, function (error, stdout, stderr) {
+
+    var parseResult = parseXcOutput(stderr)
+    var xcoutputs = parseResult.outputs
+    var errors = parseResult.errors
+
+    // If an actual error (not a `(source_file`), print and stop
+    if (errors.length) {
+      errors.forEach(error => {
+        console.error(error)
+      })
+      return;
+    }
+
+    if (xcoutputs.length != files.length) {
+      console.error('INTERNAL ERROR - swift-json-gen');
+      console.error('inconsistency; xcoutputs not equal in length to files');
+      console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
+      console.error();
+      console.error('Please report this at: https://github.com/tomlokhorst/swift-json-gen/issues');
+      return
+    }
+
+    var fileAsts = xcoutputs.map(ast.parse);
+    var mergedFileAsts = [].concat.apply([], fileAsts);
+    var globalAttrs = ast.globalAttrs(mergedFileAsts);
+
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (file.filename == 'JsonGen.swift') continue;
+
+      var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase);
+      if (lines.length == 0) continue;
+
+      var text = lines.join('\n');
+
+      printFile(text, globalAttrs, file.outbase, file.outfile);
+    }
+  });
+
 }
 
 function parseXcOutput(output: String) : { errors: String[], outputs: String[] } {
