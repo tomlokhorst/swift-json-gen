@@ -32,7 +32,7 @@ function generate() {
       });
     }
 
-    processCmdArgs((error, inputs, outputDirectory) => handleFiles(inputs, outputDirectory));
+    processCmdArgs((error, inputs, statham, outputDirectory) => handleFiles(inputs, statham, outputDirectory));
   });
 }
 
@@ -48,6 +48,7 @@ function processCmdArgs(cb) {
     .alias('h', 'help')
     .alias('o', 'output')
     .alias('v', 'version')
+    .describe('statham', 'Statham library directory')
     .describe('o', 'Output directory')
     .describe('v', 'Print version')
 
@@ -61,6 +62,7 @@ function processCmdArgs(cb) {
 
   const inputs = argv._
   const outputDirectory = argv.output
+  const stathamDirectory = typeof(argv.statham) == 'string' ? argv.statham : null
 
   if (inputs.length == 0) {
     yargs.showHelp()
@@ -68,10 +70,10 @@ function processCmdArgs(cb) {
   }
 
   if (typeof(outputDirectory) == 'string') {
-    mkdirp(outputDirectory, err => cb(err, argv._, outputDirectory))
+    mkdirp(outputDirectory, err => cb(err, inputs, stathamDirectory, outputDirectory))
   }
   else {
-    cb(null, inputs)
+    cb(null, inputs, stathamDirectory)
   }
 }
 
@@ -108,8 +110,12 @@ function containsPodError(s: string): boolean {
     || s.contains('error: use of undeclared type \'JsonArray\'');
 }
 
-function handleFiles(inputs: string[], outputDirectory: string) {
+function handleFiles(inputs: string[], stathamDirectory: string, outputDirectory: string) {
   var filenames = inputs.flatMap(fullFilenames);
+
+  if (stathamDirectory) {
+    filenames.push(stathamDirectory + '/Sources/Types.swift')
+  }
 
   var files = filenames
     .map(fn => fileDescription(fn, filenames, outputDirectory))
@@ -143,7 +149,7 @@ function handleFiles(inputs: string[], outputDirectory: string) {
         console.error(error)
       })
 
-      if (errors.any(containsPodError)) {
+      if (errors.any(containsPodError) && !stathamDirectory) {
         console.error('')
         console.error('Using types from Statham library, include argument: --statham=Pods/Statham')
       }
