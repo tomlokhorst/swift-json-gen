@@ -1,3 +1,5 @@
+import Statham
+
 struct Test08 {
   let one: Int
   let two: [String: Int]

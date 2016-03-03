@@ -6,6 +6,7 @@ var exec = require('child_process').exec
 var path = require('path')
 var fs = require('fs')
 var mkdirp = require('mkdirp')
+var tmp = require('tmp')
 
 require('./Extensions')
 var ast = require('./SwiftAst')
@@ -19,6 +20,10 @@ interface FileDesc {
   outfile: string;
   outbase: string;
 }
+
+var swiftc = 'swiftc'
+// var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+var sdk = ' -sdk "$(xcrun --show-sdk-path --sdk macosx)"'
 
 function generate() {
   const supportedVersions = ['Apple Swift version 2.1', 'Apple Swift version 2.2'];
@@ -69,11 +74,38 @@ function processCmdArgs(cb) {
     return
   }
 
-  if (typeof(outputDirectory) == 'string') {
-    mkdirp(outputDirectory, err => cb(err, inputs, stathamDirectory, outputDirectory))
+  if (stathamDirectory) {
+    tmp.dir(function _tempFileCreated(err, stathamTempDir) {
+      if (err) throw err;
+
+      // From: http://stackoverflow.com/a/27047477/2597
+      var cmd = 'xcrun ' + swiftc + sdk
+        + ' -module-name Statham'
+        // + ' -emit-library'
+        + ' -emit-module-path ' + stathamTempDir
+        + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
+
+      exec(cmd, function (error, stdout, stderr) {
+        if (stderr) {
+          console.error(stderr)
+          return
+        }
+
+        afterStatham(stathamTempDir)
+      })
+    })
   }
   else {
-    cb(null, inputs, stathamDirectory)
+    afterStatham(null)
+  }
+
+  function afterStatham(stathamTempDir) {
+    if (typeof(outputDirectory) == 'string') {
+      mkdirp(outputDirectory, err => cb(err, inputs, stathamTempDir, outputDirectory))
+    }
+    else {
+      cb(null, inputs, stathamTempDir)
+    }
   }
 }
 
@@ -110,12 +142,8 @@ function containsPodError(s: string): boolean {
     || s.contains('error: use of undeclared type \'JsonArray\'');
 }
 
-function handleFiles(inputs: string[], stathamDirectory: string, outputDirectory: string) {
+function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: string) {
   var filenames = inputs.flatMap(fullFilenames);
-
-  if (stathamDirectory) {
-    filenames.push(stathamDirectory + '/Sources/Types.swift')
-  }
 
   var files = filenames
     .map(fn => fileDescription(fn, filenames, outputDirectory))
@@ -129,9 +157,12 @@ function handleFiles(inputs: string[], stathamDirectory: string, outputDirectory
 
   var filenamesString = files.map(f => '"' + f.fullname + '"').join(' ');
 
-  var swiftc = 'swiftc'
-  // var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
-  var cmd = 'xcrun ' + swiftc + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
+  var statham = ''
+  if (stathamTempDir) {
+    statham = ' -I ' + stathamTempDir + ' -L ' + stathamTempDir + ' -lStatham -module-link-name Statham'
+  }
+
+  var cmd = 'xcrun ' + swiftc + statham + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
 
   var opts = {
     maxBuffer: 200*1024*1024
@@ -149,7 +180,7 @@ function handleFiles(inputs: string[], stathamDirectory: string, outputDirectory
         console.error(error)
       })
 
-      if (errors.any(containsPodError) && !stathamDirectory) {
+      if (errors.any(containsPodError) && !stathamTempDir) {
         console.error('')
         console.error('Using types from Statham library, include argument: --statham=Pods/Statham')
       }
