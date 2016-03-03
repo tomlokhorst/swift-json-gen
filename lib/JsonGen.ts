@@ -102,6 +102,12 @@ function fileDescription(filename: string, allFilenames: string[], outputDirecto
   }
 }
 
+function containsPodError(s: string): boolean {
+  return s.contains('error: use of undeclared type \'AnyJson\'')
+    || s.contains('error: use of undeclared type \'JsonObject\'')
+    || s.contains('error: use of undeclared type \'JsonArray\'');
+}
+
 function handleFiles(inputs: string[], outputDirectory: string) {
   var filenames = inputs.flatMap(fullFilenames);
 
@@ -136,6 +142,11 @@ function handleFiles(inputs: string[], outputDirectory: string) {
       errors.forEach(error => {
         console.error(error)
       })
+
+      if (errors.any(containsPodError)) {
+        console.error('')
+        console.error('Using types from Statham library, include argument: --statham=Pods/Statham')
+      }
       return;
     }
 
