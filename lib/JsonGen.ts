@@ -12,7 +12,7 @@ require('./Extensions')
 var ast = require('./SwiftAst')
 var printer = require('./SwiftPrinter')
 
-var headerLength = 8
+var headerLength = 9
 
 interface FileDesc {
   filename: string;

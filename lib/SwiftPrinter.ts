@@ -30,6 +30,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
   lines.push('//');
   lines.push('');
   lines.push('import Foundation');
+  lines.push('import Statham');
   lines.push('');
 
   enums.forEach(function (s) {
