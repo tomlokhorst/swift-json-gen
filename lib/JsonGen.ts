@@ -139,7 +139,8 @@ function fileDescription(filename: string, allFilenames: string[], outputDirecto
 function containsPodError(s: string): boolean {
   return s.contains('error: use of undeclared type \'AnyJson\'')
     || s.contains('error: use of undeclared type \'JsonObject\'')
-    || s.contains('error: use of undeclared type \'JsonArray\'');
+    || s.contains('error: use of undeclared type \'JsonArray\'')
+    || s.contains('error: no such module \'Statham\'');
 }
 
 function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: string) {
@@ -182,7 +183,7 @@ function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: 
 
       if (errors.any(containsPodError) && !stathamTempDir) {
         console.error('')
-        console.error('Using types from Statham library, include argument: --statham=Pods/Statham')
+        console.error('When using Statham library include argument: --statham=Pods/Statham')
       }
       return;
     }
