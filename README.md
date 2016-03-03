@@ -1,8 +1,7 @@
 <img src="https://cloud.githubusercontent.com/assets/75655/5062099/8cc5f3f8-6db3-11e4-8620-c3da216c1262.png" width="218" alt="Swift JsonGen">
 <hr>
 
-JsonGen generates source code files with decoders and encoders for parsing JSON
-into immutable Swift structs.
+JsonGen generates source code files with decoders and encoders for parsing JSON into immutable Swift structs.
 
 Features
 --------
@@ -26,10 +25,12 @@ Install the latest release from NPM:
 
     > npm install -g swift-json-gen
 
-Also copy [`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift)
-into your own project.
-This file contains some encoders and decoders for default Swift and Foundation
-types.
+Include the [Statham](https://github.com/tomlokhorst/Statham) swift library in your own project.
+This library contains some encoders and decoders for default Swift and Foundation types.
+
+With CocoaPods, this can be done with:
+
+    pod 'Statham'
 
 
 Example
@@ -98,8 +99,8 @@ extension Blog {
 Usage
 -----
 
-Include the generated `YourFile+JsonGen.swift` file and the
-[`example/JsonGen.swift`](https://raw.githubusercontent.com/tomlokhorst/swift-json-gen/develop/example/JsonGen.swift) file into your project.
+Include the generated `YourFile+JsonGen.swift` file into your project. Make sure you've also included the [Statham](https://github.com/tomlokhorst/Statham) library.
+
 The generated encoder and decoder can be used in conjunction with NSJSONSerialization like so:
 
 ```swift
@@ -163,6 +164,7 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
+ - **0.6.0** - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
  - **0.5.0** - 2016-02-29 - Adds `--output` option for providing an output directory
  - **0.4.0** - 2016-02-21 - Generate code based on JsonDecodable class
  - **0.3.0** - 2015-11-19 - Decoders with `throws`, instead of returning an optional
