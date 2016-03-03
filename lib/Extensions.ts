@@ -20,14 +20,16 @@ interface Array<T> {
   children(name: string): Array<T>;
 
   flatMap<U>(f: (arg: T) => Array<U>): Array<U>;
+
+  any(predicate: (arg: T) => boolean): boolean;
 }
 
 interface String {
   unquote(): string;
 
-  startsWith(searchString: string, position?: Number): Boolean;
-  endsWith(searchString: string, position?: Number): Boolean;
-  contains(searchString: string, position?: Number): Boolean;
+  startsWith(searchString: string, position?: Number): boolean;
+  endsWith(searchString: string, position?: Number): boolean;
+  contains(searchString: string, position?: Number): boolean;
 }
 
 Array.prototype.name = function () {
@@ -129,6 +131,16 @@ Array.prototype.flatMap = function (f) {
 
   var merged = [];
   return merged.concat.apply(merged, nested);
+}
+
+Array.prototype.any = function (predicate) {
+  for (var i = 0; i < this.length; i++) {
+    if (predicate(this[i])) {
+      return true;
+    }
+  }
+
+  return false
 }
 
 String.prototype.unquote = function () {
