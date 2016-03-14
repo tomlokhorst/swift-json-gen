@@ -20,6 +20,7 @@ interface TypeAliases {
 interface Struct {
   baseName: string;
   typeArguments: string[];
+  constructorsParams: string[];
   varDecls: VarDecl[];
 }
 
@@ -144,8 +145,17 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
     // Swift == 2.2: storage_kind is 'stored_with_trivial_accessors'
     .filter(a => a.attr('storage_kind') == 'stored' || a.attr('storage_kind') == 'stored_with_trivial_accessors')
     .map(a => varDecl(a, aliases));
+  const constructorDecls = ast.children('constructor_decl')
+    .filter(a => a.attr('access') != 'private')
+  const constructorsParams = constructorDecls.map(constructorDecl => {
+    const constructorParams = constructorDecl
+      .filter(obj => obj.length == 1 && typeof(obj[0]) == 'string')
+      .map(a => a[0])
+      .filter(s => s.contains(': '))
+    return constructorParams
+  })
 
-  var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
+  var r = { baseName: baseName, typeArguments: typeArgs, constructorsParams: constructorsParams, varDecls: varDecls };
   var rs = structs(ast, aliases, baseName);
 
   return [r].concat(rs);
@@ -333,4 +343,3 @@ function parse(text) {
 };
 
 exports.parse = parse;
-
