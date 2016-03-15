@@ -28,10 +28,15 @@ struct Test14a {
 struct Test14b {
   let one: Int
   let two: String?
+
+  init(one: Int) {
+    self.one = one
+    self.two = nil
+  }
 }
 
 extension Test14b {
-  init(one: Int, two: String) {
+  init(one: Int, two: String?) {
     self.one = one
     self.two = two
   }
