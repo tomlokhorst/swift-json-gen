@@ -6,6 +6,14 @@ var ast = require('./SwiftAst')
 
 function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): string[] {
 
+  function constructorExists(struct: Struct) : boolean {
+    const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
+    const paramsString = paramsStrings.join(', ')
+    const constructors = globalAttrs.constructors[struct.baseName] || []
+
+    return constructors.contains(paramsString);
+  }
+
   function decoderExists(typeName: string) : boolean {
     return globalAttrs.decoders.contains(typeName);
   }
@@ -15,7 +23,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
   }
 
   var structs = ast.structs(file, globalAttrs.typeAliases)
-    .filter(s => !decoderExists(s.baseName) || !encoderExists(s.baseName));
+    .filter(s => !constructorExists(s) || !decoderExists(s.baseName) || !encoderExists(s.baseName));
 
   var enums = ast.enums(file, globalAttrs.typeAliases)
     .filter(e => !decoderExists(e.baseName) || !encoderExists(e.baseName));
@@ -58,6 +66,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
 
   structs.forEach(function (s) {
 
+    var createConstructor = !constructorExists(s);
     var createDecoder = !decoderExists(s.baseName);
     var createEncoder = !encoderExists(s.baseName);
 
@@ -67,7 +76,15 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
       lines = lines.concat(makeStructDecoder(s));
     }
 
-    if (createDecoder && createEncoder) {
+    if (createDecoder && (createConstructor || createEncoder)) {
+      lines.push('');
+    }
+
+    if (createConstructor) {
+      lines = lines.concat(makeStructConstructor(s));
+    }
+
+    if (createConstructor && createEncoder) {
       lines.push('');
     }
 
@@ -109,6 +126,21 @@ function makeEnumEncoder(en: Enum) : string {
   lines.push('  }');
 
   return lines.join('\n');
+}
+
+function makeStructConstructor(struct: Struct) : string {
+  var lines = [];
+  const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
+
+  lines.push('init(' + paramsStrings.join(', ') + ') {');
+
+  struct.varDecls.forEach(varDecl => {
+    lines.push('  self.' + varDecl.name + ' = ' + varDecl.name)
+  })
+
+  lines.push('}');
+
+  return lines.map(indent(2)).join('\n');
 }
 
 function makeStructDecoder(struct: Struct) : string {
@@ -193,6 +225,29 @@ function makeStructDecoderBody(struct: Struct) : string[] {
   lines.push('return ' + struct.baseName + '(' + params.join(', ') + ')')
 
   return lines
+}
+
+function typeString(type: Type) : string {
+
+  var args = type.genericArguments
+    .map(typeString)
+
+  var argList = args.length ? '<' + args.join(', ') + '>' : '';
+  var typeName = type.alias || type.baseName;
+
+  if (typeName == 'Optional' && args.length == 1) {
+    return args[0] + '?'
+  }
+
+  if (typeName == 'Array' && args.length == 1) {
+    return '[' + args[0] + ']'
+  }
+
+  if (typeName == 'Dictionary' && args.length == 2) {
+    return '[' + args[0] + ': ' + args[1] + ']'
+  }
+
+  return typeName + argList;
 }
 
 function decodeFunction(type: Type, genericDecoders: string[]) : string {

@@ -4,12 +4,14 @@
 
 interface GlobalAttrs {
   typeAliases: { [ix: string]: string };
+  constructors: { [typeName: string]: string[] };
   decoders: string[];
   encoders: string[];
 }
 
 interface TypeFuncNames {
   typeName: string;
+  constructorParams: string[];
   funcNames: string[];
 }
 
@@ -52,8 +54,17 @@ function globalAttrs(ast: any[]) : GlobalAttrs {
     .filter(d => d.funcNames.contains('encodeJson'))
     .map(d => d.typeName);
 
+  var constructors: { [typeName: string]: string[] } = {}
+  tfns.forEach(tfn => {
+    var xs = constructors[tfn.typeName] || []
+    if (tfn.constructorParams.length) {
+      constructors[tfn.typeName] = xs.concat(tfn.constructorParams)
+    }
+  })
+
   return {
     typeAliases: typeAliases(ast),
+    constructors: constructors,
     decoders: decoders,
     encoders: encoders,
   }
@@ -68,6 +79,7 @@ function typeFuncNames(ast: any[]) : TypeFuncNames[] {
     .map(s => {
       return {
         typeName: struct(s, emptyAliases)[0].baseName,
+        constructorParams: constructorParams(s),
         funcNames: funcNames(s)
       }
     });
@@ -76,6 +88,7 @@ function typeFuncNames(ast: any[]) : TypeFuncNames[] {
     .map(s => {
       return {
         typeName: extension(s).typeBaseName,
+        constructorParams: constructorParams(s),
         funcNames: funcNames(s)
       }
     });
@@ -85,6 +98,19 @@ function typeFuncNames(ast: any[]) : TypeFuncNames[] {
 
 function funcNames(ast: any[]) : string[] {
   return ast.children('func_decl').map(f => f.key(0))
+}
+
+function constructorParams(ast: any[]) : string[] {
+  return ast.children('constructor_decl')
+    .filter(a => a.attr('access') != 'private')
+    .flatMap(constructorDeclParams)
+}
+
+function constructorDeclParams(constructorDecl: any[]) : string[] {
+  return constructorDecl
+    .filter(obj => obj.length == 1 && typeof(obj[0]) == 'string')
+    .map(a => a[0])
+    .filter(s => s.contains(': '))
 }
 
 function extension(ast: any[]) : Extension {
@@ -333,4 +359,3 @@ function parse(text) {
 };
 
 exports.parse = parse;
-
