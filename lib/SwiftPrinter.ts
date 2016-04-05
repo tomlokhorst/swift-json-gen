@@ -50,7 +50,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     var createDecoder = !decoderExists(s.baseName);
     var createEncoder = !encoderExists(s.baseName);
 
-    lines.push('extension ' + s.baseName + ' {')
+    lines.push('extension ' + escaped(s.baseName) + ' {')
 
     if (createDecoder) {
       lines = lines.concat(makeEnumDecoder(s));
@@ -74,7 +74,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     var createDecoder = !decoderExists(s.baseName);
     var createEncoder = !encoderExists(s.baseName);
 
-    lines.push('extension ' + s.baseName + ' {')
+    lines.push('extension ' + escaped(s.baseName) + ' {')
 
     if (createDecoder) {
       lines = lines.concat(makeStructDecoder(s));
@@ -108,11 +108,11 @@ exports.makeFile = makeFile;
 function makeEnumDecoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson(json: AnyObject) throws -> ' + en.baseName + ' {');
-  lines.push('    guard let rawValue = json as? ' + en.rawTypeName + ' else {');
+  lines.push('  static func decodeJson(json: AnyObject) throws -> ' + escaped(en.baseName) + ' {');
+  lines.push('    guard let rawValue = json as? ' + escaped(en.rawTypeName) + ' else {');
   lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
-  lines.push('    guard let value = ' + en.baseName + '(rawValue: rawValue) else {');
+  lines.push('    guard let value = ' + escaped(en.baseName) + '(rawValue: rawValue) else {');
   lines.push('      throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
   lines.push('    }');
   lines.push('');
@@ -125,7 +125,7 @@ function makeEnumDecoder(en: Enum) : string {
 function makeEnumEncoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  func encodeJson() -> ' + en.rawTypeName + ' {');
+  lines.push('  func encodeJson() -> ' + escaped(en.rawTypeName) + ' {');
   lines.push('    return rawValue');
   lines.push('  }');
 
@@ -153,11 +153,11 @@ function makeStructDecoder(struct: Struct) : string {
   var curried = struct.typeArguments.length > 0;
 
   if (curried) {
-    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> AnyObject throws -> ' + struct.baseName + ' {');
+    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> AnyObject throws -> ' + escaped(struct.baseName) + ' {');
     lines.push('    return { json in');
   }
   else {
-    lines.push('  static func decodeJson(json: AnyObject) throws -> ' + struct.baseName + ' {');
+    lines.push('  static func decodeJson(json: AnyObject) throws -> ' + escaped(struct.baseName) + ' {');
   }
 
   var body = makeStructDecoderBody(struct).map(indent(curried ? 6 : 4));
@@ -174,7 +174,7 @@ function makeStructDecoder(struct: Struct) : string {
 
 function decodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(t => 'decode' + t + ': AnyObject throws -> ' + t)
+    .map(typeVar => 'decode' + typeVar + ': AnyObject throws -> ' + escaped(typeVar))
 
   for (var i = 1; i < parts.length; i++) {
     parts[i] = '_ ' + parts[i];
@@ -207,7 +207,7 @@ function makeStructDecoderBody(struct: Struct) : string[] {
     var isLast = struct.varDecls.length == ix + 1
     var commaOrBrace = isLast ? '' : ','
 
-    var line = field.name + ' = _' + field.name + commaOrBrace;
+    var line = escaped(field.name) + ' = _' + field.name + commaOrBrace;
 
     return line
   });
@@ -221,12 +221,12 @@ function makeStructDecoderBody(struct: Struct) : string[] {
     lines.push('else {');
   }
 
-  var params = struct.varDecls.map(decl => decl.name + ': ' + decl.name)
+  var params = struct.varDecls.map(decl => decl.name + ': ' + escaped(decl.name))
   lines.push('  throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
   lines.push('}');
 
   lines.push('')
-  lines.push('return ' + struct.baseName + '(' + params.join(', ') + ')')
+  lines.push('return ' + escaped(struct.baseName) + '(' + params.join(', ') + ')')
 
   return lines
 }
@@ -290,7 +290,7 @@ function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
 
 function encodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(t => 'encode' + t + ': ' + t + ' -> AnyObject')
+    .map(typeVar => 'encode' + typeVar + ': ' + escaped(typeVar) + ' -> AnyObject')
 
   for (var i = 1; i < parts.length; i++) {
     parts[i] = '_ ' + parts[i];
@@ -331,7 +331,7 @@ function encodeFunction(name: string, type: Type, genericEncoders: string[]) : s
     .map(t => '{ ' + encodeFunction('$0', t, genericEncoders) + ' }')
     .join(', ');
 
-  return name + '.encodeJson(' + args + ')';
+  return escaped(name) + '.encodeJson(' + args + ')';
 }
 
 function makeFieldEncode(field: VarDecl, structTypeArguments: string[], enums: Enum[]) {
@@ -363,4 +363,26 @@ function indent(nr) {
 function isKnownType(type: Type) : boolean {
   var types = [ 'AnyObject', 'AnyJson' ];
   return types.contains(type.alias) || types.contains(type.baseName);
+}
+
+// Copied from R.swift:
+// Based on https://developer.apple.com/library/ios/documentation/Swift/Conceptual/Swift_Programming_Language/LexicalStructure.html#//apple_ref/doc/uid/TP40014097-CH30-ID413
+let swiftKeywords = [
+  // Keywords used in declarations
+  "associatedtype", "class", "deinit", "enum", "extension", "func", "import", "init", "inout", "internal", "let", "operator", "private", "protocol", "public", "static", "struct", "subscript", "typealias", "var",
+
+  // Keywords used in statements
+  "break", "case", "continue", "default", "defer", "do", "else", "fallthrough", "for", "guard", "if", "in", "repeat", "return", "switch", "where", "while",
+
+  // Keywords used in expressions and types
+  "as", "catch", "dynamicType", "false", "is", "nil", "rethrows", "super", "self", "Self", "throw", "throws", "true", "try", "__COLUMN__", "__FILE__", "__FUNCTION__", "__LINE__",
+]
+
+function escaped(name: string) : string {
+  if (swiftKeywords.contains(name)) {
+    return '`' + name + '`'
+  }
+  else {
+    return name
+  }
 }
