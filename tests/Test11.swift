@@ -1,4 +1,5 @@
 // Deeply nested implementations: https://github.com/tomlokhorst/swift-json-gen/issues/9
+import Statham
 
 typealias X = Int
 
@@ -17,32 +18,32 @@ struct Test11a {
         case Two = 2
       }
 
-//      func encodeJson() -> [String: AnyObject] {
-//        var dict: [String: AnyObject] = [:]
-//
-//        dict["x"] = x.encodeJson()
-//
-//        return dict
-//      }
+      func encodeJson() -> [String: AnyObject] {
+        var dict: [String: AnyObject] = [:]
+
+        dict["x"] = x.encodeJson()
+
+        return dict
+      }
     }
 
-//    static func decodeJson(json: AnyObject) throws -> Test11b {
-//      guard let rawValue = json as? X else {
-//        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "X")
-//      }
-//      guard let value = Test11a.Test11b(rawValue: rawValue) else {
-//        throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "Test11a.Test11b")
-//      }
-//
-//      return value
-//    }
+    static func decodeJson(json: AnyObject) throws -> Test11b {
+      guard let rawValue = json as? X else {
+        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "X")
+      }
+      guard let value = Test11a.Test11b(rawValue: rawValue) else {
+        throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "Test11a.Test11b")
+      }
+
+      return value
+    }
   }
 }
 
 
 extension Test11a.Test11b.Test11c.Test11d {
 
-//  func encodeJson() -> X {
-//    return rawValue
-//  }
+  func encodeJson() -> X {
+    return rawValue
+  }
 }

@@ -11,6 +11,10 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     const paramsString = paramsStrings.join(', ')
     const constructors = globalAttrs.constructors[struct.baseName] || []
 
+    if (struct.varDecls.length == 0 && constructors.length == 0) {
+      return true
+    }
+
     return constructors.contains(paramsString);
   }
 
@@ -244,7 +248,11 @@ function typeString(type: Type) : string {
   }
 
   if (typeName == 'Dictionary' && args.length == 2) {
-    return '[' + args[0] + ': ' + args[1] + ']'
+    return '[' + args[0] + ' : ' + args[1] + ']'
+  }
+
+  if (type.alias) {
+    return type.alias;
   }
 
   return typeName + argList;

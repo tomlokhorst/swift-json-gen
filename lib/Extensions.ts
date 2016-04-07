@@ -18,6 +18,7 @@ interface Array<T> {
   attr(key: string): string;
 
   children(name: string): Array<T>;
+  children(names: string[]): Array<T>;
 
   flatMap<U>(f: (arg: T) => Array<U>): Array<U>;
 
@@ -119,7 +120,7 @@ Array.prototype.children = function (name) {
 
   if (name) {
     arrays = arrays.filter(function (arr) {
-      return arr.name() == name;
+      return isArray(name) ? name.contains(arr.name()) : arr.name() == name;
     });
   }
 

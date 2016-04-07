@@ -23,11 +23,15 @@ interface Struct {
   baseName: string;
   typeArguments: string[];
   varDecls: VarDecl[];
+  constructorParams: string[];
+  funcNames: string[];
 }
 
 interface Enum {
   baseName: string;
   rawTypeName: string;
+  constructorParams: string[];
+  funcNames: string[];
 }
 
 interface Extension {
@@ -74,16 +78,23 @@ exports.globalAttrs = globalAttrs;
 
 function typeFuncNames(ast: any[]) : TypeFuncNames[] {
   var emptyAliases: TypeAliases = {};
-  var ds1 = ast
-    .children('struct_decl')
+  var ds1 = structs(ast, emptyAliases)
     .map(s => {
       return {
-        typeName: struct(s, emptyAliases)[0].baseName,
-        constructorParams: constructorParams(s),
-        funcNames: funcNames(s)
+        typeName: s.baseName,
+        constructorParams: s.constructorParams,
+        funcNames: s.funcNames
       }
     });
-  var ds2 = ast
+  var ds2 = enums(ast, emptyAliases)
+    .map(e => {
+      return {
+        typeName: e.baseName,
+        constructorParams: e.constructorParams,
+        funcNames: e.funcNames
+      }
+    });
+  var ds3 = ast
     .children('extension_decl')
     .map(s => {
       return {
@@ -93,7 +104,7 @@ function typeFuncNames(ast: any[]) : TypeFuncNames[] {
       }
     });
 
-  return ds1.concat(ds2);
+  return ds1.concat(ds2).concat(ds3);
 }
 
 function funcNames(ast: any[]) : string[] {
@@ -152,15 +163,18 @@ function getBaseName(ast: any[], prefix?: string) : string {
 }
 
 function structs(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
-  var structs1 = ast.children('struct_decl').flatMap(a => struct(a, aliases, prefix));
-  var structs2 = ast.children('enum_decl').flatMap(a => structs(a, aliases, getBaseName(a, prefix)));
+  var structs1 = ast.children('struct_decl')
+    .map(a => struct(a, aliases, prefix));
+
+  var structs2 = ast.children(['struct_decl', 'enum_decl'])
+    .flatMap(a => structs(a, aliases, getBaseName(a, prefix)));
 
   return structs1.concat(structs2)
 }
 
 exports.structs = structs;
 
-function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
+function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct {
 
   var baseName = getBaseName(ast, prefix);
   var fullName = ast.key(0);
@@ -171,10 +185,15 @@ function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct[] {
     .filter(a => a.attr('storage_kind') == 'stored' || a.attr('storage_kind') == 'stored_with_trivial_accessors')
     .map(a => varDecl(a, aliases));
 
-  var r = { baseName: baseName, typeArguments: typeArgs, varDecls: varDecls };
-  var rs = structs(ast, aliases, baseName);
+  var r = {
+    baseName: baseName,
+    typeArguments: typeArgs,
+    varDecls: varDecls,
+    constructorParams: constructorParams(ast),
+    funcNames: funcNames(ast)
+  };
 
-  return [r].concat(rs);
+  return r;
 }
 
 function enums(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
@@ -185,15 +204,17 @@ function enums(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
       var ix = keys.indexOf('inherits:')
       return ix > 0 && keys.length > ix + 1
     })
-    .flatMap(a => enum_(a, aliases, prefix));
-  var enums2 = ast.children('struct_decl').flatMap(a => enums(a, aliases, getBaseName(a, prefix)));
+    .map(a => enum_(a, aliases, prefix));
+
+  var enums2 = ast.children(['struct_decl', 'enum_decl'])
+    .flatMap(a => enums(a, aliases, getBaseName(a, prefix)));
 
   return enums1.concat(enums2);
 }
 
 exports.enums = enums;
 
-function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
+function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum {
 
   var baseName = getBaseName(ast, prefix);
   var fullName = ast.key(0);
@@ -202,10 +223,14 @@ function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum[] {
   var ix = keys.indexOf('inherits:')
   var rawTypeName = keys[ix + 1]
 
-  var r = { baseName: baseName, rawTypeName: rawTypeName };
-  var rs = enums(ast, aliases, baseName);
+  var r = {
+    baseName: baseName,
+    rawTypeName: rawTypeName,
+    constructorParams: constructorParams(ast),
+    funcNames: funcNames(ast)
+  };
 
-  return [r].concat(rs);
+  return r;
 }
 
 function genericArguments(fullStructName: String) : string[] {
