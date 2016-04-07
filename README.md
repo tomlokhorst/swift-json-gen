@@ -164,6 +164,7 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
+ - **0.7.0** - 2016-04-07 - Generate missing `init`
  - **0.6.0** - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
  - **0.5.0** - 2016-02-29 - Adds `--output` option for providing an output directory
  - **0.4.0** - 2016-02-21 - Generate code based on JsonDecodable class
