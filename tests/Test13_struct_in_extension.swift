@@ -1,4 +1,5 @@
 // Struct in extension: https://github.com/tomlokhorst/swift-json-gen/issues/22
+// Doesn't appear to be possible to generate something for this?
 
 struct Test13 {
   let title: String
