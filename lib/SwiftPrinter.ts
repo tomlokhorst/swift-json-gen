@@ -110,10 +110,10 @@ function makeEnumDecoder(en: Enum) : string {
 
   lines.push('  static func decodeJson(json: AnyObject) throws -> ' + escaped(en.baseName) + ' {');
   lines.push('    guard let rawValue = json as? ' + escaped(en.rawTypeName) + ' else {');
-  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
+  lines.push('      throw JsonDecodeError.wrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
   lines.push('    guard let value = ' + escaped(en.baseName) + '(rawValue: rawValue) else {');
-  lines.push('      throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
+  lines.push('      throw JsonDecodeError.wrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
   lines.push('    }');
   lines.push('');
   lines.push('    return value');
@@ -153,7 +153,7 @@ function makeStructDecoder(struct: Struct) : string {
   var curried = struct.typeArguments.length > 0;
 
   if (curried) {
-    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> AnyObject throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> (AnyObject) throws -> ' + escaped(struct.baseName) + ' {');
     lines.push('    return { json in');
   }
   else {
@@ -174,11 +174,7 @@ function makeStructDecoder(struct: Struct) : string {
 
 function decodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(typeVar => 'decode' + typeVar + ': AnyObject throws -> ' + escaped(typeVar))
-
-  for (var i = 1; i < parts.length; i++) {
-    parts[i] = '_ ' + parts[i];
-  }
+    .map(typeVar => '_ decode' + typeVar + ': (AnyObject) throws -> ' + escaped(typeVar))
 
   return '(' + parts.join(', ') + ')';
 }
@@ -207,22 +203,22 @@ function makeStructDecoderBody(struct: Struct) : string[] {
     var isLast = struct.varDecls.length == ix + 1
     var commaOrBrace = isLast ? '' : ','
 
-    var line = escaped(field.name) + ' = _' + field.name + commaOrBrace;
+    var line = 'let ' + escaped(field.name) + ' = _' + field.name + commaOrBrace;
 
     return line
   });
 
   if (fieldDecodes.length == 1) {
-    lines.push('guard let ' + fieldDecodes[0] + ' else {');
+    lines.push('guard ' + fieldDecodes[0] + ' else {');
   }
   else {
-    lines.push('guard let');
+    lines.push('guard');
     lines = lines.concat(fieldDecodes.map(indent(2)));
     lines.push('else {');
   }
 
   var params = struct.varDecls.map(decl => decl.name + ': ' + escaped(decl.name))
-  lines.push('  throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
+  lines.push('  throw JsonDecodeError.structErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
   lines.push('}');
 
   lines.push('')
@@ -290,11 +286,7 @@ function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
 
 function encodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(typeVar => 'encode' + typeVar + ': ' + escaped(typeVar) + ' -> AnyObject')
-
-  for (var i = 1; i < parts.length; i++) {
-    parts[i] = '_ ' + parts[i];
-  }
+    .map(typeVar => '_ encode' + typeVar + ': (' + escaped(typeVar) + ') -> AnyObject')
 
   return '(' + parts.join(', ') + ')';
 }
