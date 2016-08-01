@@ -5,7 +5,7 @@ struct `if` {
 typealias `for` = Int
 
 enum `__FILE__` : `for` {
-  case One = 1
+  case one = 1
 }
 
 struct Bar<`do`> {

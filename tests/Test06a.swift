@@ -6,6 +6,6 @@ struct Test06a {
 }
 
 struct Sub06a {
-  let two: NSDate
+  let two: Date
 }
 
