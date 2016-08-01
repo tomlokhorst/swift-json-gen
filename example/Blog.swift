@@ -5,6 +5,6 @@ struct Blog {
   let name: String
   let author: String?
   let needsPassword : Bool
-  let url: NSURL
+  let url: URL
 }
 
