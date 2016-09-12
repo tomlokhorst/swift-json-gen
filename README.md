@@ -14,6 +14,22 @@ Features
  * Allow for part of the datastructure to remain untyped
  * Excelent error messages when JSON decoding fails: [Improving error messages](http://q42.com/blog/post/134258806788/improving-error-messages-from-generated-json)
 
+Here's an example of a nice, detailed error message:
+
+```swift
+2 errors in Blog struct
+ - subTitle: Value is not of expected type String?: `42`
+ ▿ posts: 2 errors in array
+    ▿ [1] 1 error in Post struct
+       - title: Field missing
+    ▿ [2] 3 errors in Post struct
+       - title: Value is not of expected type String: `1`
+       - body: Value is not of expected type String: `42`
+       ▿ author: 2 errors in Author struct
+          - name: Field missing
+          - email: Field missing
+```
+
 See also the blog post:
 [Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation)
 
