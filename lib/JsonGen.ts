@@ -21,10 +21,10 @@ interface FileDesc {
   outbase: string;
 }
 
-// var swiftc = 'swiftc'
-// var sdk = ' -sdk "$(xcrun --show-sdk-path --sdk macos)"'
-var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
-var sdk = ' -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
+var swiftc = 'swiftc'
+var sdk = ' -sdk "$(xcrun --show-sdk-path --sdk macos)"'
+// var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+// var sdk = ' -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
 
 function generate() {
   const supportedVersions = ['Apple Swift version 3.0'];
