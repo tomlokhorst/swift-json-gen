@@ -18,8 +18,8 @@ struct Test11a {
         case two = 2
       }
 
-      func encodeJson() -> [String: AnyObject] {
-        var dict: [String: AnyObject] = [:]
+      func encodeJson() -> [String: Any] {
+        var dict: [String: Any] = [:]
 
         dict["x"] = x.encodeJson()
 

@@ -108,20 +108,26 @@ function typeFuncNames(ast: any[]) : TypeFuncNames[] {
 }
 
 function funcNames(ast: any[]) : string[] {
-  return ast.children('func_decl').map(f => f.key(0))
+  return ast.children('func_decl').map(f => f.key(0) == 'implicit' ? f.key(1) : f.key(0))
 }
 
 function constructorParams(ast: any[]) : string[] {
   return ast.children('constructor_decl')
-    .filter(a => a.attr('access') != 'private')
+    .filter(a => a.attr('access') != 'private' && a.attr('access') != 'fileprivate')
     .flatMap(constructorDeclParams)
 }
 
 function constructorDeclParams(constructorDecl: any[]) : string[] {
-  return constructorDecl
-    .filter(obj => obj.length == 1 && typeof(obj[0]) == 'string')
+  const parts = constructorDecl
+    .filter(obj => typeof(obj) == 'object' && obj.length == 1 && typeof(obj[0]) == 'string')
     .map(a => a[0])
-    .filter(s => s.contains(': '))
+
+  if (parts.length < 3) { return [] }
+
+  const names = parts[0]
+  const types = parts[2]
+
+  return [names + '||' + types]
 }
 
 function extension(ast: any[]) : Extension {
@@ -375,7 +381,7 @@ function parse(text) {
   }
 
   var msg = 'INTERNAL ERROR:\n'
-    + 'Likely due to errornous output from Swift compiler on some language construct (like a switch or array initializer).\n'
+    + 'Likely due to errornous output from Swift compiler on some language construct (like a switch or array ializer).\n'
     + 'Workaround: Change all methods from SomeFile.swift into extensions methods in SomeFile+Extensions.swift, which is ignored by JsonGen.\n\n'
     + 'For details, please create an issue (including the failing Swift sources):\nhttps://github.com/tomlokhorst/swift-json-gen/issues';
   console.error(msg)

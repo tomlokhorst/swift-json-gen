@@ -19,7 +19,7 @@ struct Test14a {
     self.two = two
   }
 
-  private init(one: Int, two: String) {
+  fileprivate init(one: Int, two: String) {
     self.one = one
     self.two = two
   }
