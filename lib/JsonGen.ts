@@ -21,14 +21,15 @@ interface FileDesc {
   outbase: string;
 }
 
+const execOptions = {'env': {'TOOLCHAINS': 'com.apple.dt.toolchain.Swift_2_3'}}
 var swiftc = 'swiftc'
 // var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
 var sdk = ' -sdk "$(xcrun --show-sdk-path --sdk macosx)"'
 
 function generate() {
-  const supportedVersions = ['Apple Swift version 2.1', 'Apple Swift version 2.2'];
+  const supportedVersions = ['Apple Swift version 2.3'];
 
-  exec('swiftc --version', function (error, stdout, stderr) {
+  exec(swiftc + ' --version', execOptions, function (error, stdout, stderr) {
     const versions = supportedVersions.filter(version => stdout.startsWith(version))
     if (versions.length == 0) {
       console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
@@ -85,7 +86,7 @@ function processCmdArgs(cb) {
         + ' -emit-module-path ' + stathamTempDir
         + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
 
-      exec(cmd, function (error, stdout, stderr) {
+      exec(cmd, execOptions, function (error, stdout, stderr) {
         if (stderr) {
           console.error(stderr)
           return
@@ -166,7 +167,8 @@ function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: 
   var cmd = 'xcrun ' + swiftc + statham + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
 
   var opts = {
-    maxBuffer: 200*1024*1024
+    maxBuffer: 200*1024*1024,
+    env: execOptions.env
   }
 
   exec(cmd, opts, function (error, stdout, stderr) {
