@@ -119,8 +119,8 @@ function constructorParams(ast: any[]) : string[] {
 
 function constructorDeclParams(constructorDecl: any[]) : string[] {
   const parts = constructorDecl
-    .filter(obj => typeof(obj) == 'object' && obj.length == 1 && typeof(obj[0]) == 'string')
-    .map(a => a[0])
+    .filter(obj => (typeof(obj) == 'object' && obj.length == 0) || (typeof(obj) == 'object' && obj.length == 1 && typeof(obj[0]) == 'string'))
+    .map(a => a.length ? a[0] : '')
 
   if (parts.length < 3) { return [] }
 

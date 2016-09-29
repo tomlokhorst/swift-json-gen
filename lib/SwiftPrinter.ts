@@ -12,10 +12,6 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     const paramsString = paramNames.join('') + '||' + paramTypes.join(', ')
     const constructors = globalAttrs.constructors[struct.baseName] || []
 
-    if (struct.varDecls.length == 0 && constructors.length == 0) {
-      return true
-    }
-
     return constructors.contains(paramsString);
   }
 
@@ -137,7 +133,7 @@ function makeStructConstructor(struct: Struct) : string {
   var lines = [];
   const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
 
-  lines.push('init(' + paramsStrings.join(', ') + ') {');
+  lines.push('fileprivate init(' + paramsStrings.join(', ') + ') {');
 
   struct.varDecls.forEach(varDecl => {
     lines.push('  self.' + varDecl.name + ' = ' + escaped(varDecl.name))
