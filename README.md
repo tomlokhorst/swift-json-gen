@@ -180,11 +180,12 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
- - **0.7.0** - 2016-04-07 - Generate missing `init`
- - **0.6.0** - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
- - **0.5.0** - 2016-02-29 - Adds `--output` option for providing an output directory
- - **0.4.0** - 2016-02-21 - Generate code based on JsonDecodable class
- - **0.3.0** - 2015-11-19 - Decoders with `throws`, instead of returning an optional
+ - **0.8.0** - 2016-09-29 - Update to Swift 2.3
+ - 0.7.0 - 2016-04-07 - Generate missing `init`
+ - 0.6.0 - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
+ - 0.5.0 - 2016-02-29 - Adds `--output` option for providing an output directory
+ - 0.4.0 - 2016-02-21 - Generate code based on JsonDecodable class
+ - 0.3.0 - 2015-11-19 - Decoders with `throws`, instead of returning an optional
  - 0.2.2 - 2015-09-22 - Bugfix, show correct error on missing field
  - 0.2.1 - 2015-09-14 - Bugfix, now works with released Xcode
  - **0.2.0** - 2015-09-11 - Update to Swift 2
