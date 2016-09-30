@@ -14,6 +14,22 @@ Features
  * Allow for part of the datastructure to remain untyped
  * Excelent error messages when JSON decoding fails: [Improving error messages](http://q42.com/blog/post/134258806788/improving-error-messages-from-generated-json)
 
+Here's an example of a nice, detailed error message:
+
+```swift
+2 errors in Blog struct
+ - subTitle: Value is not of expected type String?: `42`
+ ▿ posts: 2 errors in array
+    ▿ [1] 1 error in Post struct
+       - title: Field missing
+    ▿ [2] 3 errors in Post struct
+       - title: Value is not of expected type String: `1`
+       - body: Value is not of expected type String: `42`
+       ▿ author: 2 errors in Author struct
+          - name: Field missing
+          - email: Field missing
+```
+
 See also the blog post:
 [Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation)
 
@@ -164,11 +180,12 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
- - **0.7.0** - 2016-04-07 - Generate missing `init`
- - **0.6.0** - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
- - **0.5.0** - 2016-02-29 - Adds `--output` option for providing an output directory
- - **0.4.0** - 2016-02-21 - Generate code based on JsonDecodable class
- - **0.3.0** - 2015-11-19 - Decoders with `throws`, instead of returning an optional
+ - **0.8.0** - 2016-09-29 - Update to Swift 2.3
+ - 0.7.0 - 2016-04-07 - Generate missing `init`
+ - 0.6.0 - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
+ - 0.5.0 - 2016-02-29 - Adds `--output` option for providing an output directory
+ - 0.4.0 - 2016-02-21 - Generate code based on JsonDecodable class
+ - 0.3.0 - 2015-11-19 - Decoders with `throws`, instead of returning an optional
  - 0.2.2 - 2015-09-22 - Bugfix, show correct error on missing field
  - 0.2.1 - 2015-09-14 - Bugfix, now works with released Xcode
  - **0.2.0** - 2015-09-11 - Update to Swift 2
