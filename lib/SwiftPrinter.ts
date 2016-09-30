@@ -105,7 +105,7 @@ exports.makeFile = makeFile;
 function makeEnumDecoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson(json: Any) throws -> ' + escaped(en.baseName) + ' {');
+  lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(en.baseName) + ' {');
   lines.push('    guard let rawValue = json as? ' + escaped(en.rawTypeName) + ' else {');
   lines.push('      throw JsonDecodeError.wrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
@@ -154,7 +154,7 @@ function makeStructDecoder(struct: Struct) : string {
     lines.push('    return { json in');
   }
   else {
-    lines.push('  static func decodeJson(json: Any) throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(struct.baseName) + ' {');
   }
 
   var body = makeStructDecoderBody(struct).map(indent(curried ? 6 : 4));
