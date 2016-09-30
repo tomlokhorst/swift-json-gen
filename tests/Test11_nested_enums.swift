@@ -7,19 +7,19 @@ struct Test11a {
 	let s: String
 
   enum Test11b : X {
-    case One = 1
-    case Two = 2
+    case one = 1
+    case two = 2
 
     struct Test11c {
       let x: Int
 
       enum Test11d : X {
-        case One = 1
-        case Two = 2
+        case one = 1
+        case two = 2
       }
 
-      func encodeJson() -> [String: AnyObject] {
-        var dict: [String: AnyObject] = [:]
+      func encodeJson() -> [String: Any] {
+        var dict: [String: Any] = [:]
 
         dict["x"] = x.encodeJson()
 
@@ -27,12 +27,12 @@ struct Test11a {
       }
     }
 
-    static func decodeJson(json: AnyObject) throws -> Test11b {
+    static func decodeJson(_ json: AnyObject) throws -> Test11b {
       guard let rawValue = json as? X else {
-        throw JsonDecodeError.WrongType(rawValue: json, expectedType: "X")
+        throw JsonDecodeError.wrongType(rawValue: json, expectedType: "X")
       }
       guard let value = Test11a.Test11b(rawValue: rawValue) else {
-        throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "Test11a.Test11b")
+        throw JsonDecodeError.wrongEnumRawValue(rawValue: rawValue, enumType: "Test11a.Test11b")
       }
 
       return value

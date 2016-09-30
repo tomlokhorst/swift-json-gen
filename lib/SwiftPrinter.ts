@@ -7,13 +7,10 @@ var ast = require('./SwiftAst')
 function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): string[] {
 
   function constructorExists(struct: Struct) : boolean {
-    const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
-    const paramsString = paramsStrings.join(', ')
+    const paramNames = struct.varDecls.map(vd => vd.name + ':')
+    const paramTypes = struct.varDecls.map(vd => typeString(vd.type))
+    const paramsString = paramNames.join('') + '||' + paramTypes.join(', ')
     const constructors = globalAttrs.constructors[struct.baseName] || []
-
-    if (struct.varDecls.length == 0 && constructors.length == 0) {
-      return true
-    }
 
     return constructors.contains(paramsString);
   }
@@ -108,12 +105,12 @@ exports.makeFile = makeFile;
 function makeEnumDecoder(en: Enum) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson(json: AnyObject) throws -> ' + escaped(en.baseName) + ' {');
+  lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(en.baseName) + ' {');
   lines.push('    guard let rawValue = json as? ' + escaped(en.rawTypeName) + ' else {');
-  lines.push('      throw JsonDecodeError.WrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
+  lines.push('      throw JsonDecodeError.wrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
   lines.push('    guard let value = ' + escaped(en.baseName) + '(rawValue: rawValue) else {');
-  lines.push('      throw JsonDecodeError.WrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
+  lines.push('      throw JsonDecodeError.wrongEnumRawValue(rawValue: rawValue, enumType: "' + en.baseName + '")');
   lines.push('    }');
   lines.push('');
   lines.push('    return value');
@@ -136,10 +133,10 @@ function makeStructConstructor(struct: Struct) : string {
   var lines = [];
   const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
 
-  lines.push('init(' + paramsStrings.join(', ') + ') {');
+  lines.push('fileprivate init(' + paramsStrings.join(', ') + ') {');
 
   struct.varDecls.forEach(varDecl => {
-    lines.push('  self.' + varDecl.name + ' = ' + varDecl.name)
+    lines.push('  self.' + varDecl.name + ' = ' + escaped(varDecl.name))
   })
 
   lines.push('}');
@@ -153,11 +150,11 @@ function makeStructDecoder(struct: Struct) : string {
   var curried = struct.typeArguments.length > 0;
 
   if (curried) {
-    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> AnyObject throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> (Any) throws -> ' + escaped(struct.baseName) + ' {');
     lines.push('    return { json in');
   }
   else {
-    lines.push('  static func decodeJson(json: AnyObject) throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(struct.baseName) + ' {');
   }
 
   var body = makeStructDecoderBody(struct).map(indent(curried ? 6 : 4));
@@ -174,11 +171,7 @@ function makeStructDecoder(struct: Struct) : string {
 
 function decodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(typeVar => 'decode' + typeVar + ': AnyObject throws -> ' + escaped(typeVar))
-
-  for (var i = 1; i < parts.length; i++) {
-    parts[i] = '_ ' + parts[i];
-  }
+    .map(typeVar => '_ decode' + typeVar + ': @escaping (Any) throws -> ' + escaped(typeVar))
 
   return '(' + parts.join(', ') + ')';
 }
@@ -207,22 +200,22 @@ function makeStructDecoderBody(struct: Struct) : string[] {
     var isLast = struct.varDecls.length == ix + 1
     var commaOrBrace = isLast ? '' : ','
 
-    var line = escaped(field.name) + ' = _' + field.name + commaOrBrace;
+    var line = 'let ' + escaped(field.name) + ' = _' + field.name + commaOrBrace;
 
     return line
   });
 
   if (fieldDecodes.length == 1) {
-    lines.push('guard let ' + fieldDecodes[0] + ' else {');
+    lines.push('guard ' + fieldDecodes[0] + ' else {');
   }
   else {
-    lines.push('guard let');
+    lines.push('guard');
     lines = lines.concat(fieldDecodes.map(indent(2)));
     lines.push('else {');
   }
 
   var params = struct.varDecls.map(decl => decl.name + ': ' + escaped(decl.name))
-  lines.push('  throw JsonDecodeError.StructErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
+  lines.push('  throw JsonDecodeError.structErrors(type: "' + struct.baseName + '", errors: decoder.errors)')
   lines.push('}');
 
   lines.push('')
@@ -279,7 +272,7 @@ function decodeFunction(type: Type, genericDecoders: string[]) : string {
 function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
   var lines = [];
 
-  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> [String: AnyObject] {');
+  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> [String: Any] {');
 
   var body = makeStructEncoderBody(struct, enums).map(indent(4));
   lines = lines.concat(body);
@@ -290,11 +283,7 @@ function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
 
 function encodeArguments(struct: Struct) : string {
   var parts = struct.typeArguments
-    .map(typeVar => 'encode' + typeVar + ': ' + escaped(typeVar) + ' -> AnyObject')
-
-  for (var i = 1; i < parts.length; i++) {
-    parts[i] = '_ ' + parts[i];
-  }
+    .map(typeVar => '_ encode' + typeVar + ': (' + escaped(typeVar) + ') -> Any')
 
   return '(' + parts.join(', ') + ')';
 }
@@ -305,7 +294,7 @@ function makeStructEncoderBody(struct: Struct, enums: Enum[]) : string[] {
   }
 
   var lines = [];
-  lines.push('var dict: [String: AnyObject] = [:]');
+  lines.push('var dict: [String: Any] = [:]');
   lines.push('');
 
   struct.varDecls.forEach(function (d) {
@@ -361,7 +350,7 @@ function indent(nr) {
 }
 
 function isKnownType(type: Type) : boolean {
-  var types = [ 'AnyObject', 'AnyJson' ];
+  var types = [ 'Any', 'AnyObject', 'AnyJson' ];
   return types.contains(type.alias) || types.contains(type.baseName);
 }
 

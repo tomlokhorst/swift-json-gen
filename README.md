@@ -34,6 +34,15 @@ See also the blog post:
 [Swift + JSON with code generation](http://tomlokhorst.tumblr.com/post/119966903324/json-swift-with-code-generation)
 
 
+CocoaHeadsNL presentation
+-------------------------
+
+Tom Lokhorst presented at the January 2016 CocoaHeadsNL meetup.
+Comparing several Json decoding libraries for Swift and talking about code generation with JsonGen.
+
+<a href="https://vimeo.com/152054122"><img src="https://i.vimeocdn.com/video/551951015.jpg?mw=960&mh=540" width="560"></a>
+
+
 Installation
 ------------
 
@@ -59,8 +68,8 @@ struct Blog {
   let id: Int
   let name: String
   let author: String?
-  let needsPassword : Bool
-  let url: NSURL
+  let needsPassword: Bool
+  let url: URL
 }
 ```
 
@@ -75,30 +84,30 @@ with the following (truncated) content:
 
 ```swift
 extension Blog {
-  static func decodeJson(json: AnyObject) throws -> Blog {
+  static func decodeJson(json: Any) throws -> Blog {
     let decoder = try JsonDecoder(json: json)
 
     let _id = try decoder.decode("id", decoder: Int.decodeJson)
     let _name = try decoder.decode("name", decoder: String.decodeJson)
     let _author = try decoder.decode("author", decoder: Optional.decodeJson(String.decodeJson))
     let _needsPassword = try decoder.decode("needsPassword", decoder: Bool.decodeJson)
-    let _url = try decoder.decode("url", decoder: NSURL.decodeJson)
+    let _url = try decoder.decode("url", decoder: URL.decodeJson)
 
-    guard let
-      id = _id,
-      name = _name,
-      author = _author,
-      needsPassword = _needsPassword,
-      url = _url
+    guard
+      let id = _id,
+      let name = _name,
+      let author = _author,
+      let needsPassword = _needsPassword,
+      let url = _url
     else {
-      throw JsonDecodeError.StructErrors(type: "Blog", errors: decoder.errors)
+      throw JsonDecodeError.structErrors(type: "Blog", errors: decoder.errors)
     }
 
     return Blog(id: id, name: name, author: author, needsPassword: needsPassword, url: url)
   }
 
-  func encodeJson() -> [String: AnyObject] {
-    var dict: [String: AnyObject] = [:]
+  func encodeJson() -> [String: Any] {
+    var dict: [String: Any] = [:]
 
     dict["id"] = id.encodeJson()
     dict["name"] = name.encodeJson()
@@ -121,14 +130,14 @@ The generated encoder and decoder can be used in conjunction with NSJSONSerializ
 
 ```swift
 let inputStr = "{ \"title\": \"Hello, World!\", \"published\": true, \"author\": { \"first\": \"Tom\", \"last\": \"Lokhorst\" } }"
-let inputData = inputStr.dataUsingEncoding(NSUTF8StringEncoding)!
-let inputObj = try! NSJSONSerialization.JSONObjectWithData(inputData, options: [])
+let inputData = inputStr.data(using: .utf8)!
+let inputObj = try! JSONSerialization.jsonObject(with: inputData, options: [])
 
 let blog = try! Blog.decodeJson(inputObj)
 
 let outputObj = blog.encodeJson()
-let outputData = try! NSJSONSerialization.dataWithJSONObject(outputObj, options: NSJSONWritingOptions.PrettyPrinted)
-let outputStr = String(data: outputData, encoding: NSUTF8StringEncoding)!
+let outputData = try! JSONSerialization.data(withJSONObject: outputObj, options: .prettyPrinted)
+let outputStr = String(data: outputData, encoding: .utf8)!
 ```
 
 
@@ -154,11 +163,11 @@ This AST is traversed to look for struct definitions, for each struct
 
 ```swift
 extention SomeStruct {
-  static func decodeJson(json: AnyObject) throws -> SomeStruct {
+  static func decodeJson(_ json: Any) throws -> SomeStruct {
     ...
   }
 
-  func encodeJson() -> AnyObject {
+  func encodeJson() -> Any {
     ...
   }
 }
@@ -180,7 +189,8 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
- - **0.8.0** - 2016-09-29 - Update to Swift 2.3
+ - **1.0.0** - 2016-09-30 - Swift 3 support
+ - 0.8.0 - 2016-09-29 - Swift 2.3 support
  - 0.7.0 - 2016-04-07 - Generate missing `init`
  - 0.6.0 - 2016-03-03 - Move JsonGen.swift to separate library [Statham](https://github.com/tomlokhorst/Statham)
  - 0.5.0 - 2016-02-29 - Adds `--output` option for providing an output directory

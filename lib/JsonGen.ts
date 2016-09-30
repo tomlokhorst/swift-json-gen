@@ -21,15 +21,15 @@ interface FileDesc {
   outbase: string;
 }
 
-const execOptions = {'env': {'TOOLCHAINS': 'com.apple.dt.toolchain.Swift_2_3'}}
 var swiftc = 'swiftc'
-// var swiftc = '/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
-var sdk = ' -sdk "$(xcrun --show-sdk-path --sdk macosx)"'
+var sdk = ' -sdk "$(xcrun --show-sdk-path)"'
+// var swiftc = '/Applications/Xcode-8.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+// var sdk = ' -sdk /Applications/Xcode-8.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
 
 function generate() {
-  const supportedVersions = ['Apple Swift version 2.3'];
+  const supportedVersions = ['Apple Swift version 3.0'];
 
-  exec(swiftc + ' --version', execOptions, function (error, stdout, stderr) {
+  exec(swiftc + ' --version', function (error, stdout, stderr) {
     const versions = supportedVersions.filter(version => stdout.startsWith(version))
     if (versions.length == 0) {
       console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
@@ -86,7 +86,7 @@ function processCmdArgs(cb) {
         + ' -emit-module-path ' + stathamTempDir
         + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
 
-      exec(cmd, execOptions, function (error, stdout, stderr) {
+      exec(cmd, function (error, stdout, stderr) {
         if (stderr) {
           console.error(stderr)
           return
@@ -164,11 +164,10 @@ function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: 
     statham = ' -I ' + stathamTempDir + ' -L ' + stathamTempDir + ' -lStatham -module-link-name Statham'
   }
 
-  var cmd = 'xcrun ' + swiftc + statham + ' -sdk "$(xcrun --show-sdk-path --sdk macosx)" -dump-ast ' + filenamesString
+  var cmd = 'xcrun ' + swiftc + statham + sdk + ' -dump-ast ' + filenamesString
 
   var opts = {
-    maxBuffer: 200*1024*1024,
-    env: execOptions.env
+    maxBuffer: 200*1024*1024
   }
 
   exec(cmd, opts, function (error, stdout, stderr) {

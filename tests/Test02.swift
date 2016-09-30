@@ -9,8 +9,8 @@ struct Test02 {
 }
 
 struct Sub {
-  let one: NSURL
-  let two: NSDate
+  let one: URL
+  let two: Date
 
 //  static func decode(json: AnyObject) -> Sub? {
 //    return Sub(one: NSURL(), two: NSDate())

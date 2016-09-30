@@ -1,6 +1,6 @@
 enum Test10a {
-  case One(Int)
-  case Two(Bool)
+  case one(Int)
+  case two(Bool)
 }
 
 enum Test10b : String {
@@ -9,6 +9,6 @@ enum Test10b : String {
 }
 
 enum Test10c : Int {
-  case One = 1
-  case Two = 2
+  case one = 1
+  case two = 2
 }
