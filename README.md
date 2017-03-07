@@ -162,7 +162,7 @@ This AST is traversed to look for struct definitions, for each struct
 `decodeJson` and `encodeJson` functions is generated:
 
 ```swift
-extention SomeStruct {
+extension SomeStruct {
   static func decodeJson(_ json: Any) throws -> SomeStruct {
     ...
   }
