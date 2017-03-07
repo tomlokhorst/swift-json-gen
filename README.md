@@ -183,7 +183,7 @@ This package is written in TypeScript. To make changes to the code of JsonGen, f
 
 Edit the `.ts` files and compile the code as follows:
 
-    > tsc lib/*.ts
+    > tsc
 
 
 Releases
