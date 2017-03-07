@@ -36,13 +36,15 @@ function generate() {
       });
     }
 
-    processCmdArgs((error, inputs, statham, outputDirectory) => handleFiles(inputs, statham, outputDirectory));
+    processCmdArgs((error, inputs, accessLevel, stathamDir, outputDirectory) =>
+      handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
+    )
   });
 }
 
 function processCmdArgs(cb) {
 
-  var usage = 'USAGE: $0 [-o output_directory] source_files...\n\n'
+  var usage = 'USAGE: $0 [--accessLevel level] [-o output_directory] source_files...\n\n'
     + '  Generates +JsonGen.swift files for all swift files supplied,\n'
     + '  filenames ending with +Extensions.swift are excluded.'
 
@@ -52,6 +54,7 @@ function processCmdArgs(cb) {
     .alias('h', 'help')
     .alias('o', 'output')
     .alias('v', 'version')
+    .describe('accessLevel', '"public" or "internal"')
     .describe('statham', 'Statham library directory')
     .describe('o', 'Output directory')
     .describe('v', 'Print version')
@@ -67,6 +70,12 @@ function processCmdArgs(cb) {
   const inputs = argv._
   const outputDirectory = argv.output
   const stathamDirectory = typeof(argv.statham) == 'string' ? argv.statham : null
+  const accessLevel = typeof(argv.accessLevel) == 'string' ? argv.accessLevel : null
+
+  if (accessLevel != null && accessLevel != 'public' && accessLevel != 'internal') {
+    console.error('accessLevel must be "public" or "internal"')
+    return
+  }
 
   if (inputs.length == 0) {
     yargs.showHelp()
@@ -100,10 +109,10 @@ function processCmdArgs(cb) {
 
   function afterStatham(stathamTempDir) {
     if (typeof(outputDirectory) == 'string') {
-      mkdirp(outputDirectory, err => cb(err, inputs, stathamTempDir, outputDirectory))
+      mkdirp(outputDirectory, err => cb(err, inputs, accessLevel, stathamTempDir, outputDirectory))
     }
     else {
-      cb(null, inputs, stathamTempDir)
+      cb(null, inputs, accessLevel, stathamTempDir)
     }
   }
 }
@@ -142,7 +151,7 @@ function containsPodError(s: string): boolean {
     || s.contains('error: no such module \'Statham\'');
 }
 
-function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: string) {
+function handleFiles(inputs: string[], accessLevel: string, stathamTempDir: string, outputDirectory: string) {
   var filenames = inputs.flatMap(fullFilenames);
 
   var files = filenames
@@ -204,7 +213,7 @@ function handleFiles(inputs: string[], stathamTempDir: string, outputDirectory: 
       var file = files[i];
       if (file.filename == 'JsonGen.swift') continue;
 
-      var lines = printer.makeFile(fileAsts[i], globalAttrs, file.outbase);
+      var lines = printer.makeFile(fileAsts[i], accessLevel, globalAttrs, file.outbase);
       if (lines.length == 0) continue;
 
       var text = lines.join('\n');

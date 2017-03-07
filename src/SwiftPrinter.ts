@@ -4,7 +4,9 @@
 
 var ast = require('./SwiftAst')
 
-function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): string[] {
+function makeFile(file: any[], accessLevel: string, globalAttrs: GlobalAttrs, filename: string): string[] {
+
+  const accessLevelPrefix = accessLevel == null ? '' : accessLevel + ' '
 
   function constructorExists(struct: Struct) : boolean {
     const paramNames = struct.varDecls.map(vd => vd.name + ':')
@@ -50,7 +52,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     lines.push('extension ' + escaped(s.baseName) + ' {')
 
     if (createDecoder) {
-      lines = lines.concat(makeEnumDecoder(s));
+      lines = lines.concat(makeEnumDecoder(s, accessLevelPrefix));
     }
 
     if (createDecoder && createEncoder) {
@@ -58,7 +60,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     }
 
     if (createEncoder) {
-      lines = lines.concat(makeEnumEncoder(s));
+      lines = lines.concat(makeEnumEncoder(s, accessLevelPrefix));
     }
 
     lines.push('}');
@@ -74,7 +76,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     lines.push('extension ' + escaped(s.baseName) + ' {')
 
     if (createDecoder) {
-      lines = lines.concat(makeStructDecoder(s));
+      lines = lines.concat(makeStructDecoder(s, accessLevelPrefix));
     }
 
     if (createDecoder && (createConstructor || createEncoder)) {
@@ -82,7 +84,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     }
 
     if (createConstructor) {
-      lines = lines.concat(makeStructConstructor(s));
+      lines = lines.concat(makeStructConstructor(s, accessLevelPrefix));
     }
 
     if (createConstructor && createEncoder) {
@@ -90,7 +92,7 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
     }
 
     if (createEncoder) {
-      lines = lines.concat(makeStructEncoder(s, enums));
+      lines = lines.concat(makeStructEncoder(s, enums, accessLevelPrefix));
     }
 
     lines.push('}');
@@ -102,10 +104,10 @@ function makeFile(file: any[], globalAttrs: GlobalAttrs, filename: string): stri
 
 exports.makeFile = makeFile;
 
-function makeEnumDecoder(en: Enum) : string {
+function makeEnumDecoder(en: Enum, accessLevelPrefix: string) : string {
   var lines = [];
 
-  lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(en.baseName) + ' {');
+  lines.push('  ' + accessLevelPrefix + 'static func decodeJson(_ json: Any) throws -> ' + escaped(en.baseName) + ' {');
   lines.push('    guard let rawValue = json as? ' + escaped(en.rawTypeName) + ' else {');
   lines.push('      throw JsonDecodeError.wrongType(rawValue: json, expectedType: "' + en.rawTypeName + '")');
   lines.push('    }');
@@ -119,17 +121,17 @@ function makeEnumDecoder(en: Enum) : string {
   return lines.join('\n');
 }
 
-function makeEnumEncoder(en: Enum) : string {
+function makeEnumEncoder(en: Enum, accessLevelPrefix: string) : string {
   var lines = [];
 
-  lines.push('  func encodeJson() -> ' + escaped(en.rawTypeName) + ' {');
+  lines.push('  ' + accessLevelPrefix + 'func encodeJson() -> ' + escaped(en.rawTypeName) + ' {');
   lines.push('    return rawValue');
   lines.push('  }');
 
   return lines.join('\n');
 }
 
-function makeStructConstructor(struct: Struct) : string {
+function makeStructConstructor(struct: Struct, accessLevelPrefix: string) : string {
   var lines = [];
   const paramsStrings = struct.varDecls.map(vd => vd.name + ': ' + typeString(vd.type))
 
@@ -144,17 +146,17 @@ function makeStructConstructor(struct: Struct) : string {
   return lines.map(indent(2)).join('\n');
 }
 
-function makeStructDecoder(struct: Struct) : string {
+function makeStructDecoder(struct: Struct, accessLevelPrefix: string) : string {
   var lines = [];
 
   var curried = struct.typeArguments.length > 0;
 
   if (curried) {
-    lines.push('  static func decodeJson' + decodeArguments(struct) + ' -> (Any) throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  ' + accessLevelPrefix + 'static func decodeJson' + decodeArguments(struct) + ' -> (Any) throws -> ' + escaped(struct.baseName) + ' {');
     lines.push('    return { json in');
   }
   else {
-    lines.push('  static func decodeJson(_ json: Any) throws -> ' + escaped(struct.baseName) + ' {');
+    lines.push('  ' + accessLevelPrefix + 'static func decodeJson(_ json: Any) throws -> ' + escaped(struct.baseName) + ' {');
   }
 
   var body = makeStructDecoderBody(struct).map(indent(curried ? 6 : 4));
@@ -269,10 +271,10 @@ function decodeFunction(type: Type, genericDecoders: string[]) : string {
   return typeName + '.decodeJson' + argList;
 }
 
-function makeStructEncoder(struct: Struct, enums: Enum[]) : string {
+function makeStructEncoder(struct: Struct, enums: Enum[], accessLevelPrefix: string) : string {
   var lines = [];
 
-  lines.push('  func encodeJson' + encodeArguments(struct) + ' -> [String: Any] {');
+  lines.push('  ' + accessLevelPrefix + 'func encodeJson' + encodeArguments(struct) + ' -> [String: Any] {');
 
   var body = makeStructEncoderBody(struct, enums).map(indent(4));
   lines = lines.concat(body);
