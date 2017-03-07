@@ -1,5 +1,3 @@
-/// <reference path="node.d.ts" />
-
 "use strict";
 
 var exec = require('child_process').exec
