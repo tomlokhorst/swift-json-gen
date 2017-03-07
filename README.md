@@ -189,6 +189,7 @@ Edit the `.ts` files and compile the code as follows:
 Releases
 --------
 
+ - 1.1.0 - 2017-03-07 - Add `--accessLevel` flag
  - **1.0.0** - 2016-09-30 - Swift 3 support
  - 0.8.0 - 2016-09-29 - Swift 2.3 support
  - 0.7.0 - 2016-04-07 - Generate missing `init`
