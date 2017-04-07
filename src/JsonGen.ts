@@ -1,10 +1,11 @@
 "use strict";
 
-var exec = require('child_process').exec
-var path = require('path')
-var fs = require('fs')
-var mkdirp = require('mkdirp')
-var tmp = require('tmp')
+const bluebird = require('bluebird')
+const exec = bluebird.promisify(require('child_process').exec, { multiArgs: true })
+const fs = bluebird.promisifyAll(require('fs'))
+const mkdirp = bluebird.promisify(require('mkdirp'))
+const tmp = bluebird.promisify(require('tmp').dir)
+const path = require('path')
 
 require('./Extensions')
 var ast = require('./SwiftAst')
@@ -24,7 +25,7 @@ var sdk = '$(xcrun --show-sdk-path)'
 // var swiftc = '/Applications/Xcode-9.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
 // var sdk = '/Applications/Xcode-9.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
 
-function generate() {
+async function generate() {
 
   var usage = 'USAGE: $0 [--accessLevel level] [-o output_directory] source_files...\n\n'
     + '  Generates +JsonGen.swift files for all swift files supplied,\n'
@@ -51,7 +52,7 @@ function generate() {
   }
 
   const inputs = argv._
-  const outputDirectory = argv.output
+  const outputDirectory = typeof(argv.output) == 'string' ? argv.output : null
   const stathamDirectory = typeof(argv.statham) == 'string' ? argv.statham : null
   const accessLevel = typeof(argv.accessLevel) == 'string' ? argv.accessLevel : null
   const xcode = typeof(argv.xcode) == 'string' ? argv.xcode : null
@@ -72,67 +73,56 @@ function generate() {
     return
   }
 
-  checkSwiftVersion()
+  await checkSwiftVersion()
+  const stathamDir = await compileStatham()
+  if (outputDirectory) {
+    await mkdirp(outputDirectory)
+  }
+  handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
 
-  function checkSwiftVersion() {
+  async function checkSwiftVersion() {
     const supportedVersions = ['Apple Swift version 3.0'];
+    const [stdout] = await exec('"' + swiftc + '" --version')
+    const versions = supportedVersions.filter(version => stdout.startsWith(version))
 
-    exec('"' + swiftc + '" --version', function (error, stdout, stderr) {
-      const versions = supportedVersions.filter(version => stdout.startsWith(version))
-      if (versions.length == 0) {
-        console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
-        supportedVersions.forEach(function (version) {
-          console.log(' - ' + version);
-        });
-      }
-
-      createStatham()
-    });
-  }
-
-  function createStatham() {
-    if (stathamDirectory) {
-      tmp.dir(function _tempFileCreated(err, stathamTempDir) {
-        if (err) throw err;
-
-        // From: http://stackoverflow.com/a/27047477/2597
-        var cmd = 'xcrun "' + swiftc + '" -sdk "' + sdk + '"'
-          + ' -module-name Statham'
-          // + ' -emit-library'
-          + ' -emit-module-path ' + stathamTempDir
-          + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
-
-        exec(cmd, function (error, stdout, stderr) {
-          if (stderr) {
-            console.error(stderr)
-            return
-          }
-
-          afterStatham(stathamTempDir)
-        })
-      })
-    }
-    else {
-      afterStatham(null)
+    if (versions.length == 0) {
+      console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
+      supportedVersions.forEach(function (version) {
+        console.log(' - ' + version);
+      });
     }
   }
 
-  function afterStatham(stathamTempDir) {
-    if (typeof(outputDirectory) == 'string') {
-      mkdirp(outputDirectory, err => handleFiles(inputs, accessLevel, stathamTempDir, outputDirectory))
-    }
-    else {
-      handleFiles(inputs, accessLevel, stathamTempDir, null)
-    }
+  async function compileStatham() {
+    if (!stathamDirectory) { return null }
+
+    const stathamTempDir = await tmp()
+
+    // From: http://stackoverflow.com/a/27047477/2597
+    const cmd = 'xcrun "' + swiftc + '" -sdk "' + sdk + '"'
+      + ' -module-name Statham'
+      // + ' -emit-library'
+      + ' -emit-module-path ' + stathamTempDir
+      + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
+
+    await exec(cmd)
+
+    return stathamTempDir
   }
 }
 
-function fullFilenames(input: string) : string[] {
+async function fullFilenames(input: string) : Promise<string[]> {
 
-  if (fs.statSync(input).isDirectory()) {
-    return fs.readdirSync(input).flatMap(fn => fullFilenames(path.join(input, fn)))
+  const stat = await fs.statAsync(input)
+
+  if (stat.isDirectory()) {
+    const inputFiles = await fs.readdirAsync(input)
+    const filenamePromises = inputFiles.map(fn => fullFilenames(path.join(input, fn)))
+    const filenamesArray = await bluebird.all(filenamePromises)
+
+    return filenamesArray.flatMap(x => x)
   }
-  else if (fs.statSync(input).isFile()) {
+  else if (stat.isFile()) {
     return [input]
   }
 
@@ -161,8 +151,9 @@ function containsPodError(s: string): boolean {
     || s.contains('error: no such module \'Statham\'');
 }
 
-function handleFiles(inputs: string[], accessLevel: string, stathamTempDir: string, outputDirectory: string) {
-  var filenames = inputs.flatMap(fullFilenames);
+async function handleFiles(inputs: string[], accessLevel: string, stathamTempDir: string, outputDirectory: string) {
+  var inputFilenames: string[][] = await bluebird.all(inputs.map(fullFilenames))
+  var filenames: string[] = inputFilenames.flatMap(x => x)
 
   var files = filenames
     .map(fn => fileDescription(fn, filenames, outputDirectory))
@@ -187,51 +178,49 @@ function handleFiles(inputs: string[], accessLevel: string, stathamTempDir: stri
     maxBuffer: 200*1024*1024
   }
 
-  exec(cmd, opts, function (error, stdout, stderr) {
+  const [stdout, stderr] = await exec(cmd, opts)
 
-    var parseResult = parseXcOutput(stderr)
-    var xcoutputs = parseResult.outputs
-    var errors = parseResult.errors
+  var parseResult = parseXcOutput(stderr)
+  var xcoutputs = parseResult.outputs
+  var errors = parseResult.errors
 
-    // If an actual error (not a `(source_file`), print and stop
-    if (errors.length) {
-      errors.forEach(error => {
-        console.error(error)
-      })
+  // If an actual error (not a `(source_file`), print and stop
+  if (errors.length) {
+    errors.forEach(error => {
+      console.error(error)
+    })
 
-      if (errors.any(containsPodError) && !stathamTempDir) {
-        console.error('')
-        console.error('When using Statham library include argument: --statham=Pods/Statham')
-      }
-      return;
+    if (errors.any(containsPodError) && !stathamTempDir) {
+      console.error('')
+      console.error('When using Statham library include argument: --statham=Pods/Statham')
     }
+    return;
+  }
 
-    if (xcoutputs.length != files.length) {
-      console.error('INTERNAL ERROR - swift-json-gen');
-      console.error('inconsistency; xcoutputs not equal in length to files');
-      console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
-      console.error();
-      console.error('Please report this at: https://github.com/tomlokhorst/swift-json-gen/issues');
-      return
-    }
+  if (xcoutputs.length != files.length) {
+    console.error('INTERNAL ERROR - swift-json-gen');
+    console.error('inconsistency; xcoutputs not equal in length to files');
+    console.error('xcoutputs.length: ' + xcoutputs.length + ', files: ' + files.length);
+    console.error();
+    console.error('Please report this at: https://github.com/tomlokhorst/swift-json-gen/issues');
+    return
+  }
 
-    var fileAsts = xcoutputs.map(ast.parse);
-    var mergedFileAsts = [].concat.apply([], fileAsts);
-    var globalAttrs = ast.globalAttrs(mergedFileAsts);
+  var fileAsts = xcoutputs.map(ast.parse);
+  var mergedFileAsts = [].concat.apply([], fileAsts);
+  var globalAttrs = ast.globalAttrs(mergedFileAsts);
 
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      if (file.filename == 'JsonGen.swift') continue;
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (file.filename == 'JsonGen.swift') continue;
 
-      var lines = printer.makeFile(fileAsts[i], accessLevel, globalAttrs, file.outbase);
-      if (lines.length == 0) continue;
+    var lines = printer.makeFile(fileAsts[i], accessLevel, globalAttrs, file.outbase);
+    if (lines.length == 0) continue;
 
-      var text = lines.join('\n');
+    var text = lines.join('\n');
 
-      printFile(text, globalAttrs, file.outbase, file.outfile);
-    }
-  });
-
+    await printFile(text, globalAttrs, file.outbase, file.outfile);
+  }
 }
 
 function parseXcOutput(output: String) : { errors: String[], outputs: String[] } {
@@ -267,15 +256,13 @@ function parseXcOutput(output: String) : { errors: String[], outputs: String[] }
   return { errors: errors, outputs: xcoutputs }
 }
 
-function printFile(text, globalAttrs, outbase, outfile) {
+async function printFile(text, globalAttrs, outbase, outfile) {
 
-  fs.readFile(outfile, 'utf8', (err, existing) => {
+  // Ignore first 4? lines (containing only generated date)
+  var outputBody = text.split('\n').slice(headerLength).join('\n');
 
-    // Ignore first 4 lines (containing only generated date)
-    var outputBody = text.split('\n').slice(headerLength).join('\n');
-
-    // No exising file and no output body
-    if (err && outputBody == '') return;
+  try {
+    const existing = await fs.readFileAsync(outfile, 'utf8')
 
     if (existing) {
       var existingBody = existing.split('\n').slice(headerLength).join('\n')
@@ -283,13 +270,13 @@ function printFile(text, globalAttrs, outbase, outfile) {
       // No changes since existing
       if (outputBody == existingBody) return;
     }
+  }
+  catch(_) {
+    // If no exising file and no output body
+    if (outputBody == '') return;
+  }
 
-    fs.writeFile(outfile, text, 'utf8', err => {
-      if (err) {
-        console.error(err);
-      }
-    });
-  });
+  await fs.writeFileAsync(outfile, text, 'utf8')
 }
 
 exports.generate = generate;
