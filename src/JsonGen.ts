@@ -20,29 +20,11 @@ interface FileDesc {
 }
 
 var swiftc = 'swiftc'
-var sdk = ' -sdk "$(xcrun --show-sdk-path)"'
-// var swiftc = '/Applications/Xcode-8.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
-// var sdk = ' -sdk /Applications/Xcode-8.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
+var sdk = '$(xcrun --show-sdk-path)'
+// var swiftc = '/Applications/Xcode-9.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+// var sdk = '/Applications/Xcode-9.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
 
 function generate() {
-  const supportedVersions = ['Apple Swift version 3.0'];
-
-  exec(swiftc + ' --version', function (error, stdout, stderr) {
-    const versions = supportedVersions.filter(version => stdout.startsWith(version))
-    if (versions.length == 0) {
-      console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
-      supportedVersions.forEach(function (version) {
-        console.log(' - ' + version);
-      });
-    }
-
-    processCmdArgs((error, inputs, accessLevel, stathamDir, outputDirectory) =>
-      handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
-    )
-  });
-}
-
-function processCmdArgs(cb) {
 
   var usage = 'USAGE: $0 [--accessLevel level] [-o output_directory] source_files...\n\n'
     + '  Generates +JsonGen.swift files for all swift files supplied,\n'
@@ -56,6 +38,7 @@ function processCmdArgs(cb) {
     .alias('v', 'version')
     .describe('accessLevel', '"public" or "internal"')
     .describe('statham', 'Statham library directory')
+    .describe('xcode', 'Path to Xcode.app')
     .describe('o', 'Output directory')
     .describe('v', 'Print version')
 
@@ -71,6 +54,13 @@ function processCmdArgs(cb) {
   const outputDirectory = argv.output
   const stathamDirectory = typeof(argv.statham) == 'string' ? argv.statham : null
   const accessLevel = typeof(argv.accessLevel) == 'string' ? argv.accessLevel : null
+  const xcode = typeof(argv.xcode) == 'string' ? argv.xcode : null
+
+  // override swiftc and sdk paths
+  if (xcode != null) {
+    swiftc = xcode + '/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
+    sdk    = xcode + '/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
+  }
 
   if (accessLevel != null && accessLevel != 'public' && accessLevel != 'internal') {
     console.error('accessLevel must be "public" or "internal"')
@@ -82,37 +72,57 @@ function processCmdArgs(cb) {
     return
   }
 
-  if (stathamDirectory) {
-    tmp.dir(function _tempFileCreated(err, stathamTempDir) {
-      if (err) throw err;
+  checkSwiftVersion()
 
-      // From: http://stackoverflow.com/a/27047477/2597
-      var cmd = 'xcrun ' + swiftc + sdk
-        + ' -module-name Statham'
-        // + ' -emit-library'
-        + ' -emit-module-path ' + stathamTempDir
-        + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
+  function checkSwiftVersion() {
+    const supportedVersions = ['Apple Swift version 3.0'];
 
-      exec(cmd, function (error, stdout, stderr) {
-        if (stderr) {
-          console.error(stderr)
-          return
-        }
+    exec('"' + swiftc + '" --version', function (error, stdout, stderr) {
+      const versions = supportedVersions.filter(version => stdout.startsWith(version))
+      if (versions.length == 0) {
+        console.log('WARNING: Using untested swiftc version. swift-json-gen has been tested with:')
+        supportedVersions.forEach(function (version) {
+          console.log(' - ' + version);
+        });
+      }
 
-        afterStatham(stathamTempDir)
-      })
-    })
+      createStatham()
+    });
   }
-  else {
-    afterStatham(null)
+
+  function createStatham() {
+    if (stathamDirectory) {
+      tmp.dir(function _tempFileCreated(err, stathamTempDir) {
+        if (err) throw err;
+
+        // From: http://stackoverflow.com/a/27047477/2597
+        var cmd = 'xcrun "' + swiftc + '" -sdk "' + sdk + '"'
+          + ' -module-name Statham'
+          // + ' -emit-library'
+          + ' -emit-module-path ' + stathamTempDir
+          + ' -emit-module ' + stathamDirectory + '/Sources/*.swift'
+
+        exec(cmd, function (error, stdout, stderr) {
+          if (stderr) {
+            console.error(stderr)
+            return
+          }
+
+          afterStatham(stathamTempDir)
+        })
+      })
+    }
+    else {
+      afterStatham(null)
+    }
   }
 
   function afterStatham(stathamTempDir) {
     if (typeof(outputDirectory) == 'string') {
-      mkdirp(outputDirectory, err => cb(err, inputs, accessLevel, stathamTempDir, outputDirectory))
+      mkdirp(outputDirectory, err => handleFiles(inputs, accessLevel, stathamTempDir, outputDirectory))
     }
     else {
-      cb(null, inputs, accessLevel, stathamTempDir)
+      handleFiles(inputs, accessLevel, stathamTempDir, null)
     }
   }
 }
@@ -171,7 +181,7 @@ function handleFiles(inputs: string[], accessLevel: string, stathamTempDir: stri
     statham = ' -I ' + stathamTempDir + ' -L ' + stathamTempDir + ' -lStatham -module-link-name Statham'
   }
 
-  var cmd = 'xcrun ' + swiftc + statham + sdk + ' -dump-ast ' + filenamesString
+  var cmd = 'xcrun "' + swiftc + '"' + statham + ' -sdk "' +sdk + '" -dump-ast ' + filenamesString
 
   var opts = {
     maxBuffer: 200*1024*1024
