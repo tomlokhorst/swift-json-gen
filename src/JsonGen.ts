@@ -219,7 +219,7 @@ async function handleFiles(inputs: string[], accessLevel: string, stathamTempDir
 
     var text = lines.join('\n');
 
-    await printFile(text, globalAttrs, file.outbase, file.outfile);
+    await printFile(text, file.outfile);
   }
 }
 
@@ -256,7 +256,7 @@ function parseXcOutput(output: String) : { errors: String[], outputs: String[] }
   return { errors: errors, outputs: xcoutputs }
 }
 
-async function printFile(text, globalAttrs, outbase, outfile) {
+async function printFile(text, outfile) {
 
   // Ignore first 4? lines (containing only generated date)
   var outputBody = text.split('\n').slice(headerLength).join('\n');
