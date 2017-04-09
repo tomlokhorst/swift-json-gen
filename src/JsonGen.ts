@@ -81,7 +81,7 @@ async function generate() {
   handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
 
   async function checkSwiftVersion() {
-    const supportedVersions = ['Apple Swift version 3.0'];
+    const supportedVersions = ['Apple Swift version 3.0', 'Apple Swift version 3.1'];
     const [stdout] = await exec('"' + swiftc + '" --version')
     const versions = supportedVersions.filter(version => stdout.startsWith(version))
 
@@ -211,10 +211,11 @@ async function handleFiles(inputs: string[], accessLevel: string, stathamTempDir
   var globalAttrs = ast.globalAttrs(mergedFileAsts);
 
   for (var i = 0; i < files.length; i++) {
-    var file = files[i];
+    const file = files[i]
+    const fileAst = fileAsts[i]
     if (file.filename == 'JsonGen.swift') continue;
 
-    var lines = printer.makeFile(fileAsts[i], accessLevel, globalAttrs, file.outbase);
+    var lines = printer.makeFile(fileAst, accessLevel, globalAttrs, file.outbase)
     if (lines.length == 0) continue;
 
     var text = lines.join('\n');

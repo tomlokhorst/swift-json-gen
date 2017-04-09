@@ -182,14 +182,12 @@ exports.structs = structs;
 
 function struct(ast: any[], aliases: TypeAliases, prefix?: string) : Struct {
 
-  var baseName = getBaseName(ast, prefix);
-  var fullName = ast.key(0);
-  var typeArgs = genericArguments(fullName)
+  var baseName = getBaseName(ast, prefix)
+  var fullName = ast.key(0)
+  var typeArgs = genericArguments(ast)
   var varDecls = ast.children('var_decl')
-    // Swift <= 2.1: storage_kind is 'stored'
-    // Swift == 2.2: storage_kind is 'stored_with_trivial_accessors'
-    .filter(a => a.attr('storage_kind') == 'stored' || a.attr('storage_kind') == 'stored_with_trivial_accessors')
-    .map(a => varDecl(a, aliases));
+    .filter(a => a.attr('storage_kind') == 'stored_with_trivial_accessors')
+    .map(a => varDecl(a, aliases))
 
   var r = {
     baseName: baseName,
@@ -239,9 +237,20 @@ function enum_(ast: any[], aliases: TypeAliases, prefix?: string) : Enum {
   return r;
 }
 
-function genericArguments(fullStructName: String) : string[] {
+function genericArguments(ast: any[]) : string[] {
 
-  var matches = fullStructName.match(/<([^>]*)>/);
+  // Swift 3.0 has generic arguments as part of fullName
+  // Swift 3.1 has generic arguments as separate parts, after fullName
+  var generics = ast.key(0)
+  const keys =  ast.keys()
+  for (var ix = 1; ix < keys.length; ix++) {
+    const key = keys[ix]
+    if (key == 'interface') { break }
+    if (key == '@_fixed_layout') { break }
+    generics += key
+  }
+
+  var matches = generics.match(/<([^>]*)>/);
   if (matches && matches.length == 2)
     return matches[1].split(',').map(s => s.trim());
 
