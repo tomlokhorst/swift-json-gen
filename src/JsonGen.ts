@@ -40,6 +40,7 @@ async function generate() {
     .describe('accessLevel', '"public" or "internal"')
     .describe('statham', 'Statham library directory')
     .describe('xcode', 'Path to Xcode.app')
+    .describe('toolchain', 'Path to Swift toolchain')
     .describe('o', 'Output directory')
     .describe('v', 'Print version')
 
@@ -56,11 +57,17 @@ async function generate() {
   const stathamDirectory = typeof(argv.statham) == 'string' ? argv.statham : null
   const accessLevel = typeof(argv.accessLevel) == 'string' ? argv.accessLevel : null
   const xcode = typeof(argv.xcode) == 'string' ? argv.xcode : null
+  const toolchain = typeof(argv.toolchain) == 'string' ? argv.toolchain : null
 
   // override swiftc and sdk paths
   if (xcode != null) {
     swiftc = xcode + '/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc'
     sdk    = xcode + '/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk'
+  }
+
+  // override swiftc toolchain path
+  if (toolchain != null) {
+    swiftc = toolchain + '/usr/bin/swiftc'
   }
 
   if (accessLevel != null && accessLevel != 'public' && accessLevel != 'internal') {
@@ -81,7 +88,7 @@ async function generate() {
   handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
 
   async function checkSwiftVersion() {
-    const supportedVersions = ['Apple Swift version 3.0', 'Apple Swift version 3.1'];
+    const supportedVersions = ['Apple Swift version 3.0', 'Apple Swift version 3.1', 'Apple Swift version 4.0-dev'];
     const [stdout] = await exec('"' + swiftc + '" --version')
     const versions = supportedVersions.filter(version => stdout.startsWith(version))
 
