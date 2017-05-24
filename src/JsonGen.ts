@@ -88,7 +88,7 @@ async function generate() {
   handleFiles(inputs, accessLevel, stathamDir, outputDirectory)
 
   async function checkSwiftVersion() {
-    const supportedVersions = ['Apple Swift version 3.0', 'Apple Swift version 3.1'];
+    const supportedVersions = ['Apple Swift version 3.0', 'Apple Swift version 3.1', 'Apple Swift version 4.0-dev'];
     const [stdout] = await exec('"' + swiftc + '" --version')
     const versions = supportedVersions.filter(version => stdout.startsWith(version))
 
